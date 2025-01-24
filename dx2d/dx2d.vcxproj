@@ -71,12 +71,12 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <IncludePath>$(SolutionDir)includes\irrklang;$(VC_IncludePath);$(WindowsSDK_IncludePath);$(IncludePath)</IncludePath>
-    <LibraryPath>$(SolutionDir)includes\irrklang;$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64);$(IncludePath)</LibraryPath>
+    <IncludePath>$(SolutionDir)include\irrklang;$(VC_IncludePath);$(WindowsSDK_IncludePath);$(IncludePath)</IncludePath>
+    <LibraryPath>$(SolutionDir)include\irrklang;$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64);$(IncludePath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <IncludePath>$(SolutionDir)includes\irrklang;$(VC_IncludePath);$(WindowsSDK_IncludePath);$(IncludePath)</IncludePath>
-    <LibraryPath>$(SolutionDir)includes\irrklang;$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64);$(IncludePath)</LibraryPath>
+    <IncludePath>$(SolutionDir)include\irrklang;$(VC_IncludePath);$(WindowsSDK_IncludePath);$(IncludePath)</IncludePath>
+    <LibraryPath>$(SolutionDir)include\irrklang;$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64);$(IncludePath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -139,6 +139,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="..\include\irrklang\irrKlang.h" />
     <ClInclude Include="2d\common2d.h" />
     <ClInclude Include="3d\aabb.h" />
     <ClInclude Include="3d\bvh.h" />
@@ -185,6 +186,13 @@
     </CopyFileToFolders>
     <CopyFileToFolders Include="..\libs\irrklang\irrKlang.dll">
       <FileType>Document</FileType>
+    </CopyFileToFolders>
+  </ItemGroup>
+  <ItemGroup>
+    <CopyFileToFolders Include="..\assets\mainmenu.mp3">
+      <FileType>Document</FileType>
+      <DestinationFolders Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(OutDir)assets</DestinationFolders>
+      <DestinationFolders Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(OutDir)assets</DestinationFolders>
     </CopyFileToFolders>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
