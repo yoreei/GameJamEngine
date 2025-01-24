@@ -25,6 +25,9 @@
 
 
 GJRenderer renderer;
+GJScene scene;
+GJSimulation simulation{ &scene };
+
 
 // Forward declarations of functions
 void DiscardResources();
@@ -104,8 +107,6 @@ int WINAPI wWinMain(
 
 	ShowWindow(hwnd, nCmdShow);
 
-	GJScene scene;
-	GJSimulation simulation{ &scene };
 	renderer.init(hwnd, &scene);
 
 	// Message loop
@@ -167,9 +168,22 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 	return 0;
 
 	case WM_DESTROY:
+	{
 		PostQuitMessage(0);
-		return 0;
+	}
+	return 0;
 
+	case WM_KEYDOWN:
+	{
+		simulation.handleInput(wParam, true);
+	}
+	return 0;
+
+	case WM_KEYUP:
+	{
+		simulation.hanldeInput(wParam, false);
+	}
+	return 0;
 	default:
 		return DefWindowProc(hwnd, uMsg, wParam, lParam);
 	}

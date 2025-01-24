@@ -127,6 +127,10 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="2d\common2d.h" />
+    <ClInclude Include="3d\common3d.h" />
+    <ClInclude Include="3d\vec3.h" />
+    <ClInclude Include="Animation.h" />
     <ClInclude Include="GJScene.h" />
     <ClInclude Include="GJSimulation.h" />
     <ClInclude Include="Resource.h" />

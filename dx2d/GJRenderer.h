@@ -4,6 +4,8 @@
 #include <string>
 #include <tchar.h>
 #include <chrono>
+#include <array>
+#include <stdexcept>
 
 #include "GJScene.h"
 
@@ -57,6 +59,7 @@ public:
 		);
 		checkFailed(hr, hWnd);
 
+		// Setup transformations
 		int screenWidth = GetSystemMetrics(SM_CXSCREEN);
 		int screenHeight = GetSystemMetrics(SM_CYSCREEN);
 
@@ -72,11 +75,19 @@ public:
 			0.f  // Y offset
 		);
 
-		// Combine transformations
 		D2D1::Matrix3x2F transform = scale * translation;
 
 		pRenderTarget->SetTransform(transform);
 
+		// Setup Draw Call Table
+		drawCallTable[static_cast<size_t>(State::INGAME)] = &drawINGAME;
+		drawCallTable[static_cast<size_t>(State::LOSS)] = &drawLOSS;
+		drawCallTable[static_cast<size_t>(State::WIN)] = &drawWIN;
+		drawCallTable[static_cast<size_t>(State::MAINMENU)] = &drawMAINMENU;
+		drawCallTable[static_cast<size_t>(State::PAUSED)] = &drawPAUSED;
+		if (static_cast<uint32_t>(State::size) != 5) {
+			throw std::runtime_error("update state handling in renderer\n");
+		}
 
 	}
 
@@ -119,8 +130,8 @@ public:
 
 		pRenderTarget->Clear(D2D1::ColorF(D2D1::ColorF::Black));
 
-		drawScene();
-		drawUI();
+		// 
+		(this->*drawCallTable[static_cast<size_t>(scene->state)])();
 
 		HRESULT hr = pRenderTarget->EndDraw();
 
@@ -131,6 +142,24 @@ public:
 		}
 
 	}
+
+	void drawINGAME() {
+		drawScene();
+		drawUI();
+	}
+	void drawMAINMENU() {
+		drawMenu("Main Menu");
+	}
+	void drawLOSS() {
+		drawMenu("Loss");
+	}
+	void drawWIN() {
+		drawMenu("Victory");
+	}
+	void drawPAUSED() {
+		drawMenu("Paused");
+	}
+
 	void drawScene() {
 		D2D1_RECT_F unitSquare = D2D1::RectF(
 			20.f, 20.f,
@@ -147,6 +176,10 @@ public:
 		);
 		pRenderTarget->DrawRectangle(unitSquare, brushes["amber"], 2.0f);
 
+	}
+
+	void drawMenu(const std::string& text) {
+		// todo
 	}
 
 private:
@@ -171,5 +204,7 @@ private:
 		{"green", nullptr },
 		{"amber", nullptr },
 		{"blue", nullptr } };
+	using DrawFunction = void(GJRenderer::*)();
+	std::array<DrawFunction, static_cast<size_t>(State::size)> drawCallTable;
 
 };
