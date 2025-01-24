@@ -19,16 +19,14 @@
 
 #pragma comment(lib, "d2d1.lib")
 
-#include "irrKlang.h"
 
 #include "GJRenderer.h"
 #include "GJScene.h"
 #include "GJSimulation.h"
 
 
+GJSimulation simulation;
 GJRenderer renderer;
-GJScene scene;
-GJSimulation simulation{ &scene };
 
 
 // Forward declarations of functions
@@ -48,18 +46,6 @@ int WINAPI wWinMain(
 	_In_ int       nCmdShow
 )
 {
-	irrklang::ISoundEngine* audioEngine = irrklang::createIrrKlangDevice();
-    if (!audioEngine) {
-        MessageBox(NULL, L"Could not initialize audio engine.", L"Error", MB_OK);
-        return false;
-    }
-
-    // Play background music in a loop
-    auto backgroundMusic = audioEngine->play2D("assets/mainmenu.mp3", true, false, true);
-    if (!backgroundMusic) {
-        MessageBox(NULL, L"Could not play background music.", L"Error", MB_OK);
-        return false;
-    }
 
 	// Initialize COM library
 	HRESULT hr = CoInitialize(NULL);
@@ -114,7 +100,8 @@ int WINAPI wWinMain(
 
 	ShowWindow(hwnd, nCmdShow);
 
-	renderer.init(hwnd, &scene);
+	const GJScene* scene = simulation.getScene();
+	renderer.init(hwnd, scene);
 
 	// Message loop
 	MSG msg = { };

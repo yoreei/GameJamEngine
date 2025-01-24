@@ -1,5 +1,4 @@
 #pragma once
-#include <d2d1.h>
 #include <map>
 #include <string>
 #include <tchar.h>
@@ -7,11 +6,14 @@
 #include <array>
 #include <stdexcept>
 
+#include <d2d1.h>
+#include <dwrite.h>
+
 #include "GJScene.h"
 
 class GJRenderer {
 public:
-	void init(HWND _hWnd, GJScene* _scene) {
+	void init(HWND _hWnd, const GJScene* _scene) {
 		hWnd = _hWnd;
 		scene = _scene;
 		HRESULT hr = D2D1CreateFactory(D2D1_FACTORY_TYPE_SINGLE_THREADED, &pFactory);
@@ -57,6 +59,50 @@ public:
 			&brushes["blue"]
 		);
 		checkFailed(hr, hWnd);
+
+		IDWriteFactory* pDWriteFactory = nullptr;
+		hr = DWriteCreateFactory(DWRITE_FACTORY_TYPE_SHARED, __uuidof(IDWriteFactory), reinterpret_cast<IUnknown**>(&pDWriteFactory));
+
+		hr = pDWriteFactory->CreateTextFormat(
+			L"Arial",                // Font family
+			nullptr,                 // Font collection
+			DWRITE_FONT_WEIGHT_NORMAL,
+			DWRITE_FONT_STYLE_NORMAL,
+			DWRITE_FONT_STRETCH_NORMAL,
+			42.0f,                   // Font size
+			L"",                     // Locale
+			&textFormats[static_cast<size_t>(TextFormat::HEADING)]
+		);
+
+		hr = pDWriteFactory->CreateTextFormat(
+			L"Arial",                // Font family
+			nullptr,                 // Font collection
+			DWRITE_FONT_WEIGHT_NORMAL,
+			DWRITE_FONT_STYLE_NORMAL,
+			DWRITE_FONT_STRETCH_NORMAL,
+			24.0f,                   // Font size
+			L"",                     // Locale
+			&textFormats[static_cast<size_t>(TextFormat::NORMAL)]
+		);
+
+		hr = pDWriteFactory->CreateTextFormat(
+			L"Arial",                // Font family
+			nullptr,                 // Font collection
+			DWRITE_FONT_WEIGHT_NORMAL,
+			DWRITE_FONT_STYLE_NORMAL,
+			DWRITE_FONT_STRETCH_NORMAL,
+			16.0f,                   // Font size
+			L"",                     // Locale
+			&textFormats[static_cast<size_t>(TextFormat::SMALL)]
+		);
+		if (static_cast<size_t>(TextFormat::size) != 3) {
+			MessageBox(NULL, L"update textformat", L"Error", MB_OK);
+			exit(-1);
+		}
+
+		// Set Text Alignment
+		hr = pTextFormat->SetTextAlignment(DWRITE_TEXT_ALIGNMENT_LEADING);
+		hr = pTextFormat->SetParagraphAlignment(DWRITE_PARAGRAPH_ALIGNMENT_NEAR);
 
 		// Setup transformations
 		int screenWidth = GetSystemMetrics(SM_CXSCREEN);
@@ -179,6 +225,13 @@ public:
 
 	void drawMenu(const std::string& text) {
 		// todo
+		pRenderTarget->DrawText(
+			L"Hello, Direct2D!",    // Text to render
+			wcslen(L"Hello, Direct2D!"),
+			textFormats[static_cast<size_t>(TextFormat::HEADING)],            // Text format
+			D2D1::RectF(50, 50, 400, 100), // Layout rectangle
+			brushes["blue"]
+		);
 		D2D1_RECT_F unitSquare = D2D1::RectF(
 			20.f, 20.f,
 			100.f, 100.f
@@ -201,7 +254,7 @@ private:
 
 private:
 	HWND hWnd;
-	GJScene* scene = nullptr;
+	const GJScene* scene = nullptr;
 	ID2D1HwndRenderTarget* pRenderTarget = nullptr;
 	ID2D1Factory* pFactory = nullptr;
 	std::map<std::string, ID2D1SolidColorBrush*> brushes = {
@@ -209,7 +262,15 @@ private:
 		{"green", nullptr },
 		{"amber", nullptr },
 		{"blue", nullptr } };
+	std::array<IDWriteTextFormat*, static_cast<size_t>(TextFormat::size)> textFormats;
 	using DrawFunction = void(GJRenderer::*)();
 	std::array<DrawFunction, static_cast<size_t>(State::size)> drawCallTable;
 
+};
+
+enum class TextFormat {
+	HEADING = 0,
+	NORMAL,
+	SMALL,
+	size
 };
