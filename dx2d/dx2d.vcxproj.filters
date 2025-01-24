@@ -17,7 +17,10 @@
       <UniqueIdentifier>{6238bdcc-3c7e-493c-a703-2ed6e98180c8}</UniqueIdentifier>
     </Filter>
     <Filter Include="Header Files\3d">
-      <UniqueIdentifier>{701c95fa-0000-4300-94d3-5c6803a43db8}</UniqueIdentifier>
+      <UniqueIdentifier>{1251086c-5c21-46dd-801c-621468d6ff08}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="dlls">
+      <UniqueIdentifier>{9b9a88ed-aa08-4314-ac3d-dcedfbba5dfd}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -36,12 +39,6 @@
     <ClInclude Include="2d\common2d.h">
       <Filter>Header Files\2d</Filter>
     </ClInclude>
-    <ClInclude Include="3d\vec3.h">
-      <Filter>Header Files\3d</Filter>
-    </ClInclude>
-    <ClInclude Include="3d\common3d.h">
-      <Filter>Header Files\3d</Filter>
-    </ClInclude>
     <ClInclude Include="3d\aabb.h">
       <Filter>Header Files\3d</Filter>
     </ClInclude>
@@ -52,6 +49,9 @@
       <Filter>Header Files\3d</Filter>
     </ClInclude>
     <ClInclude Include="3d\color.h">
+      <Filter>Header Files\3d</Filter>
+    </ClInclude>
+    <ClInclude Include="3d\common3d.h">
       <Filter>Header Files\3d</Filter>
     </ClInclude>
     <ClInclude Include="3d\constant_medium.h">
@@ -93,37 +93,16 @@
     <ClInclude Include="3d\texture.h">
       <Filter>Header Files\3d</Filter>
     </ClInclude>
+    <ClInclude Include="3d\vec3.h">
+      <Filter>Header Files\3d</Filter>
+    </ClInclude>
+    <ClInclude Include="GJRenderer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="dx2d.cpp">
       <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="GJRenderer.h">
-      <Filter>Header Files</Filter>
-    </ClCompile>
-    <ClCompile Include="3d\cos_cubed.cc">
-      <Filter>Header Files\3d</Filter>
-    </ClCompile>
-    <ClCompile Include="3d\cos_density.cc">
-      <Filter>Header Files\3d</Filter>
-    </ClCompile>
-    <ClCompile Include="3d\estimate_halfway.cc">
-      <Filter>Header Files\3d</Filter>
-    </ClCompile>
-    <ClCompile Include="3d\integrate_x_sq.cc">
-      <Filter>Header Files\3d</Filter>
-    </ClCompile>
-    <ClCompile Include="3d\main.cc">
-      <Filter>Header Files\3d</Filter>
-    </ClCompile>
-    <ClCompile Include="3d\pi.cc">
-      <Filter>Header Files\3d</Filter>
-    </ClCompile>
-    <ClCompile Include="3d\sphere_importance.cc">
-      <Filter>Header Files\3d</Filter>
-    </ClCompile>
-    <ClCompile Include="3d\sphere_plot.cc">
-      <Filter>Header Files\3d</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -138,5 +117,16 @@
     <Image Include="dx2d.ico">
       <Filter>Resource Files</Filter>
     </Image>
+  </ItemGroup>
+  <ItemGroup>
+    <CopyFileToFolders Include="..\libs\irrklang\ikpMP3.dll">
+      <Filter>dlls</Filter>
+    </CopyFileToFolders>
+    <CopyFileToFolders Include="..\libs\irrklang\ikpFlac.dll">
+      <Filter>dlls</Filter>
+    </CopyFileToFolders>
+    <CopyFileToFolders Include="..\libs\irrklang\irrKlang.dll">
+      <Filter>dlls</Filter>
+    </CopyFileToFolders>
   </ItemGroup>
 </Project>

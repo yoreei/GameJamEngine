@@ -36,7 +36,7 @@ class ray {
   private:
     point3 orig;
     vec3 dir;
-    double tm;
+    double tm = 0;
 };
 
 

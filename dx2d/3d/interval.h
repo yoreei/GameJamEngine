@@ -12,39 +12,39 @@
 
 class interval {
   public:
-    double min, max;
+    double mMin, mMax;
 
-    interval() : min(+infinity), max(-infinity) {} // Default interval is empty
+    interval() : mMin(+infinity), mMax(-infinity) {} // Default interval is empty
 
-    interval(double min, double max) : min(min), max(max) {}
+    interval(double mMin, double mMax) : mMin(mMin), mMax(mMax) {}
 
     interval(const interval& a, const interval& b) {
         // Create the interval tightly enclosing the two input intervals.
-        min = a.min <= b.min ? a.min : b.min;
-        max = a.max >= b.max ? a.max : b.max;
+        mMin = a.mMin <= b.mMin ? a.mMin : b.mMin;
+        mMax = a.mMax >= b.mMax ? a.mMax : b.mMax;
     }
 
     double size() const {
-        return max - min;
+        return mMax - mMin;
     }
 
     bool contains(double x) const {
-        return min <= x && x <= max;
+        return mMin <= x && x <= mMax;
     }
 
     bool surrounds(double x) const {
-        return min < x && x < max;
+        return mMin < x && x < mMax;
     }
 
     double clamp(double x) const {
-        if (x < min) return min;
-        if (x > max) return max;
+        if (x < mMin) return mMin;
+        if (x > mMax) return mMax;
         return x;
     }
 
     interval expand(double delta) const {
         auto padding = delta/2;
-        return interval(min - padding, max + padding);
+        return interval(mMin - padding, mMax + padding);
     }
 
     static const interval empty, universe;
@@ -54,7 +54,7 @@ const interval interval::empty    = interval(+infinity, -infinity);
 const interval interval::universe = interval(-infinity, +infinity);
 
 interval operator+(const interval& ival, double displacement) {
-    return interval(ival.min + displacement, ival.max + displacement);
+    return interval(ival.mMin + displacement, ival.mMax + displacement);
 }
 
 interval operator+(double displacement, const interval& ival) {

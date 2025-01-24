@@ -14,7 +14,6 @@ public:
 	void init(HWND _hWnd, GJScene* _scene) {
 		hWnd = _hWnd;
 		scene = _scene;
-
 		HRESULT hr = D2D1CreateFactory(D2D1_FACTORY_TYPE_SINGLE_THREADED, &pFactory);
 		checkFailed(hr, hWnd);
 
@@ -36,25 +35,25 @@ public:
 
 		// Create a solid color brush
 		hr = pRenderTarget->CreateSolidColorBrush(
-			D2D1::ColorF(D2D1::ColorF(0.1, 0.1, 0.1)),
+			D2D1::ColorF(D2D1::ColorF(0.1f, 0.1f, 0.1f)),
 			&brushes["black"]
 		);
 		checkFailed(hr, hWnd);
 
 		hr = pRenderTarget->CreateSolidColorBrush(
-			D2D1::ColorF(D2D1::ColorF(0.7, 1.0, 0.7)),
+			D2D1::ColorF(D2D1::ColorF(0.7f, 1.f, 0.7f)),
 			&brushes["green"]
 		);
 		checkFailed(hr, hWnd);
 
 		hr = pRenderTarget->CreateSolidColorBrush(
-			D2D1::ColorF(D2D1::ColorF(1.0, 1.0, 0.7)),
+			D2D1::ColorF(D2D1::ColorF(1.f, 1.f, 0.7f)),
 			&brushes["amber"]
 		);
 		checkFailed(hr, hWnd);
 
 		hr = pRenderTarget->CreateSolidColorBrush(
-			D2D1::ColorF(D2D1::ColorF(0.7, 0.7, 1.0)),
+			D2D1::ColorF(D2D1::ColorF(0.7f, 0.7f, 1.f)),
 			&brushes["blue"]
 		);
 		checkFailed(hr, hWnd);
@@ -80,11 +79,11 @@ public:
 		pRenderTarget->SetTransform(transform);
 
 		// Setup Draw Call Table
-		drawCallTable[static_cast<size_t>(State::INGAME)] = &drawINGAME;
-		drawCallTable[static_cast<size_t>(State::LOSS)] = &drawLOSS;
-		drawCallTable[static_cast<size_t>(State::WIN)] = &drawWIN;
-		drawCallTable[static_cast<size_t>(State::MAINMENU)] = &drawMAINMENU;
-		drawCallTable[static_cast<size_t>(State::PAUSED)] = &drawPAUSED;
+		drawCallTable[static_cast<size_t>(State::INGAME)] = &GJRenderer::drawINGAME;
+		drawCallTable[static_cast<size_t>(State::LOSS)] = &GJRenderer::drawLOSS;
+		drawCallTable[static_cast<size_t>(State::WIN)] = &GJRenderer::drawWIN;
+		drawCallTable[static_cast<size_t>(State::MAINMENU)] = &GJRenderer::drawMAINMENU;
+		drawCallTable[static_cast<size_t>(State::PAUSED)] = &GJRenderer::drawPAUSED;
 		if (static_cast<uint32_t>(State::size) != 5) {
 			throw std::runtime_error("update state handling in renderer\n");
 		}
@@ -165,7 +164,7 @@ public:
 			20.f, 20.f,
 			100.f, 100.f
 		);
-		pRenderTarget->DrawRectangle(unitSquare, brushes["green"], 3.0f);
+		pRenderTarget->DrawRectangle(unitSquare, brushes["green"], 3.f);
 
 	}
 
@@ -174,12 +173,18 @@ public:
 			0.f, 0.f,
 			360.f, 360.f
 		);
-		pRenderTarget->DrawRectangle(unitSquare, brushes["amber"], 2.0f);
+		pRenderTarget->DrawRectangle(unitSquare, brushes["amber"], 2.f);
 
 	}
 
 	void drawMenu(const std::string& text) {
 		// todo
+		D2D1_RECT_F unitSquare = D2D1::RectF(
+			20.f, 20.f,
+			100.f, 100.f
+		);
+		pRenderTarget->DrawRectangle(unitSquare, brushes["blue"], 3.f);
+
 	}
 
 private:

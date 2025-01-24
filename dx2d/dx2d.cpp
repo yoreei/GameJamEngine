@@ -30,7 +30,6 @@ GJSimulation simulation{ &scene };
 
 
 // Forward declarations of functions
-void DiscardResources();
 LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 
 #define MAX_LOADSTRING 100
@@ -39,13 +38,6 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 HINSTANCE hInst;                                // current instance
 WCHAR szTitle[MAX_LOADSTRING];                  // The title bar text
 WCHAR szWindowClass[MAX_LOADSTRING];            // the main window class name
-
-// Forward declarations of functions included in this code module:
-ATOM                MyRegisterClass(HINSTANCE hInstance);
-BOOL                InitInstance(HINSTANCE, int);
-LRESULT CALLBACK    WndProc(HWND, UINT, WPARAM, LPARAM);
-INT_PTR CALLBACK    About(HWND, UINT, WPARAM, LPARAM);
-
 
 int WINAPI wWinMain(
 	_In_ HINSTANCE hInstance,
@@ -181,7 +173,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 
 	case WM_KEYUP:
 	{
-		simulation.hanldeInput(wParam, false);
+		simulation.handleInput(wParam, false);
 	}
 	return 0;
 	default:
