@@ -27,8 +27,40 @@ enum class Belonging {
 	Player = 0,
 	CPU
 };
+
+vec3 vec3op(const vec3& v, float(*op)(float)) {
+	return vec3{
+		op(v.e[0]),
+		op(v.e[1]),
+		op(v.e[2])
+	};
+}
+
 struct Entity {
-	uint32_t health = 1;
+	uint16_t health = 1;
+	uint16_t size = 2;
+	vec3 momentum;
+	vec3 getPos() const {
+		vec3 val = vec3op(position, std::floor);
+		return val;
+	}
+	void moveBy(const vec3& by) {
+		position += by;
+	}
+	//const vec3& getRawPos() {
+	//	return position;
+	//}
+	void setPos(const vec3& newPos) {
+		position = newPos;
+	}
+	void setX(float x) {
+		position.e[0] = x;
+	}
+	void setY(float y) {
+		position.e[1] = y;
+	}
+private:
+	vec3 position;
 	//Belonging belonging = Belonging::CPU;
 	//uint8_t factionId = 0;
 	//uint32_t maxHealth = 1;
@@ -37,10 +69,7 @@ struct Entity {
 	//std::bitset<32> powerUps;
 	//std::vector<size_t> bitmapIds{};
 	//Animation animation = Animation::Idle;
-	vec3 position;
 	//vec3 direction;
-	vec3 momentum;
-	float size = 2.f;
 };
 
 class Obstacle {
@@ -63,8 +92,8 @@ struct GJScene {
 		entities.fill(GJScene::emptyEntity);
 		for (int i = 0; i < entities.size(); ++i) {
 			entities[i].health = 1;
-			entities[i].size = 2.f;
-			entities[i].position = vec3{ 180.f, 240.f, 0.f };
+			entities[i].size = 2;
+			entities[i].setPos(vec3{ 180.f, 240.f, 0.f });
 		}
 		//keybinds['Q'] = 0;
 		//keybinds['A'] = 0;
@@ -76,47 +105,14 @@ struct GJScene {
 		obstacles.fill(GJScene::emptyEntity);
 	}
 
-	void initRandObstacle(size_t id) {
-		static std::mt19937 GEN(46);
-		static std::uniform_real_distribution<float> posDistr(-20.f, 380.f);
-		static std::uniform_int_distribution<int> sideDistr(0, 3);
-
-		obstacles[id].health = 1;
-		int side = sideDistr(GEN);
-		if (side == 0) { // top
-			obstacles[id].position.e[0] = posDistr(GEN); //< set y
-			obstacles[id].position.e[1] = 0.f;
-		}
-		else if (side == 1) { // right
-			obstacles[id].position.e[1] = posDistr(GEN); //< set y
-			obstacles[id].position.e[0] = 380.f;
-
-		}
-		else if (side == 2) { // bottom
-			obstacles[id].position.e[0] = posDistr(GEN); //< set y
-			obstacles[id].position.e[1] = 380.f;
-
-		}
-		else { // left
-			obstacles[id].position.e[1] = posDistr(GEN); //< set y
-			obstacles[id].position.e[0] = 0.f;
-
-		}
-		vec3 center{ 180.f, 180.f, 0.f };
-		obstacles[id].momentum = center - obstacles[id].position;
-		obstacles[id].momentum = unit_vector(obstacles[id].momentum);
-
-		static std::uniform_real_distribution<float> sizeDist(3.f, 9.f);
-		obstacles[id].size = sizeDist(GEN) ;
-
-
-	}
 
 	//std::array<int, 255> keybinds;
+	//Entity playerController;
 	State state = State::MAINMENU;
-	Entity playerController;
+	bool cooldown = true;
+	uint64_t points = 0;
 	//v entities move
 	std::array<Entity, 4> entities{};
-	std::array<Entity, 1> obstacles{};
+	std::array<Entity, 24> obstacles{};
 	static inline Entity emptyEntity;
 };

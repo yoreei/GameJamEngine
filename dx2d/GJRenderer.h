@@ -216,7 +216,6 @@ public:
 		HRESULT hr = pLowResRenderTarget->GetBitmap(&pLowResBitmap);
 		checkFailed(hr, hWnd);
 
-		// todo: draw pGridBitmap onto pRenderTarget
 		D2D1_RECT_F destRect = D2D1::RectF(
 			0.0f,                         // Left
 			0.0f,                         // Top
@@ -246,31 +245,42 @@ public:
 		drawUI();
 	}
 	void drawMAINMENU() {
+		drawScene();
 		drawMenu("Main Menu");
 	}
 	void drawLOSS() {
+		drawScene();
 		drawEnd(L"Loss");
 	}
 	void drawWIN() {
+		drawScene();
 		drawEnd(L"Victory");
 	}
 	void drawPAUSED() {
+		drawScene();
 		drawPaused();
 	}
 
 	void drawScene() {
 		for (const Entity& e : scene->entities) {
-			e.position;
+			if (e.health <= 0) {
+				continue;
+			}
+
+			vec3 pos = e.getPos();
 			D2D1_RECT_F unitSquare = D2D1::RectF(
-				e.position.e[0], e.position.e[1],
-				e.position.e[0] + e.size, e.position.e[1] + e.size
+				e.getPos().e[0], pos.e[1],
+				e.getPos().e[0] + e.size, pos.e[1] + e.size
 			);
 			pLowResRenderTarget->DrawRectangle(unitSquare, brushes["blue"], 2.f);
 		}
 		for (const Entity& o : scene->obstacles) {
-			o.position;
+			if (o.health <= 0) {
+				continue;
+			}
+			vec3 pos = o.getPos();
 			D2D1_ELLIPSE ellipse = D2D1::Ellipse(
-				D2D1::Point2F(o.position.x(), o.position.y()), // Center point (x, y)
+				D2D1::Point2F(pos.x(), pos.y()), // Center point (x, y)
 				o.size,                         // Radius X
 				o.size                          // Radius Y
 			);
@@ -280,6 +290,28 @@ public:
 	}
 
 	void drawUI() {
+		textFormats[static_cast<size_t>(TextFormat::SMALL)]->SetTextAlignment(DWRITE_TEXT_ALIGNMENT_CENTER);
+		if (scene->cooldown) {
+			pLowResRenderTarget->DrawText(
+				L"cd!",    // Text to render
+				wcslen(L"cd!"),
+				textFormats[static_cast<size_t>(TextFormat::SMALL)],            // Text format
+				D2D1::RectF(0, 340, 360, 360), // Layout rectangle
+				brushes["blue"]
+			);
+		}
+		std::wstring wPoints = std::to_wstring(scene->points);
+
+		textFormats[static_cast<size_t>(TextFormat::SMALL)]->SetTextAlignment(DWRITE_TEXT_ALIGNMENT_TRAILING);
+		pLowResRenderTarget->DrawText(
+			wPoints.c_str(),    // Text to render
+			wcslen(wPoints.c_str()),
+			textFormats[static_cast<size_t>(TextFormat::SMALL)],            // Text format
+			D2D1::RectF(0, 340, 360, 360), // Layout rectangle
+			brushes["blue"]
+		);
+
+
 
 	}
 
@@ -293,7 +325,7 @@ public:
 	}
 
 	void drawPaused() {
-		pRenderTarget->DrawText(
+		pLowResRenderTarget->DrawText(
 			L"Paused",    // Text to render
 			wcslen(L"Paused"),
 			textFormats[static_cast<size_t>(TextFormat::HEADING)],            // Text format
@@ -302,7 +334,7 @@ public:
 		);
 
 		std::wstring t = L"[ESC] Resume\n[R] Reload\n[BSPACE] Quit";
-		pRenderTarget->DrawText(
+		pLowResRenderTarget->DrawText(
 			t.c_str(),    // Text to render
 			wcslen(t.c_str()),
 			textFormats[static_cast<size_t>(TextFormat::NORMAL)],            // Text format
@@ -312,7 +344,7 @@ public:
 	}
 
 	void drawEnd(const std::wstring& text) {
-		pRenderTarget->DrawText(
+		pLowResRenderTarget->DrawText(
 			text.c_str(),    // Text to render
 			wcslen(text.c_str()),
 			textFormats[static_cast<size_t>(TextFormat::HEADING)],            // Text format
@@ -320,7 +352,7 @@ public:
 			brushes["blue"]
 		);
 
-		pRenderTarget->DrawText(
+		pLowResRenderTarget->DrawText(
 			L"[R] Reload\n[BSPACE] Quit",    // Text to render
 			wcslen(L"[R] Reload\n[BSPACE] Quit"),
 			textFormats[static_cast<size_t>(TextFormat::NORMAL)],            // Text format
@@ -331,7 +363,7 @@ public:
 	}
 	void drawMenu(const std::string& text) {
 		// todo
-		pRenderTarget->DrawText(
+		pLowResRenderTarget->DrawText(
 			L"Electric\nBubble\nBath!",    // Text to render
 			wcslen(L"Electric\nBubble\nBath!"),
 			textFormats[static_cast<size_t>(TextFormat::HEADING)],            // Text format
@@ -339,7 +371,7 @@ public:
 			brushes["blue"]
 		);
 
-		pRenderTarget->DrawText(
+		pLowResRenderTarget->DrawText(
 			L"[ENTER] Game\n[BSPACE] Quit",    // Text to render
 			wcslen(L"[ENTER] Game\nF[BSPACE] Quit"),
 			textFormats[static_cast<size_t>(TextFormat::NORMAL)],            // Text format

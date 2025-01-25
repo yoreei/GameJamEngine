@@ -108,6 +108,9 @@
     <ClInclude Include="..\include\irrklang\irrKlang.h">
       <Filter>Header Files\includes</Filter>
     </ClInclude>
+    <ClInclude Include="GJGlobals.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="dx2d.cpp">

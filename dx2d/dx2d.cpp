@@ -23,7 +23,7 @@
 #include "GJRenderer.h"
 #include "GJScene.h"
 #include "GJSimulation.h"
-
+#include "GJGlobals.h"
 
 GJSimulation simulation;
 GJRenderer renderer;
@@ -112,8 +112,8 @@ int WINAPI wWinMain(
 
 	bool running = true;
 	auto lastTime = std::chrono::high_resolution_clock::now();
-	auto currentTime = std::chrono::high_resolution_clock::now();
-	std::chrono::duration<double, std::milli> delta = currentTime - lastTime;
+	GNow = std::chrono::high_resolution_clock::now();
+	std::chrono::duration<double, std::milli> delta = GNow - lastTime;
 	while (running) {
 
 		while (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
@@ -125,15 +125,15 @@ int WINAPI wWinMain(
 			TranslateMessage(&msg);
 			DispatchMessage(&msg);
 		}
-		currentTime = std::chrono::high_resolution_clock::now();
-		delta = currentTime - lastTime;
+		GNow = std::chrono::high_resolution_clock::now();
+		delta = GNow - lastTime;
 		if (delta < frameDuration) {
 			continue;
 		}
 		else {
 			simulation.tick(frameDuration);
 			renderer.draw(frameDuration);
-			lastTime = currentTime;
+			lastTime = GNow;
 		}
 	}
 

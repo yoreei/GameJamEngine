@@ -163,6 +163,7 @@
     <ClInclude Include="3d\texture.h" />
     <ClInclude Include="3d\vec3.h" />
     <ClInclude Include="Animation.h" />
+    <ClInclude Include="GJGlobals.h" />
     <ClInclude Include="GJScene.h" />
     <ClInclude Include="GJSimulation.h" />
     <ClInclude Include="Resource.h" />

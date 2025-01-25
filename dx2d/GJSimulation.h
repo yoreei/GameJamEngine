@@ -5,6 +5,7 @@
 
 #include "GJScene.h"
 #include "irrKlang.h"
+#include "GJGlobals.h"
 
 class GJSimulation {
 public:
@@ -19,7 +20,7 @@ public:
 		kbCallTable[static_cast<size_t>(State::PAUSED)] = &GJSimulation::kbHandlePAUSED;
 		kbCallTable[static_cast<size_t>(State::MAINMENU)] = &GJSimulation::kbHandleMAINMENU;
 
-		lastExplode = std::chrono::high_resolution_clock::now();
+		lastExplode = getTime();
 		enterMAINMENU();
 	}
 
@@ -35,41 +36,40 @@ public:
 			}
 
 			size_t target = 0;
-			auto now = std::chrono::high_resolution_clock::now();
-			std::chrono::duration<double, std::milli> cooldownDuration{ 1000.f * cooldownSeconds };
-			if (now - lastExplode < cooldownDuration) { return; }
-			else {
-				lastExplode = now;
 
-				if (wParam == 'Q') {
-					target = 0;
-				}
-				else if (wParam == 'W') {
-					target = 1;
-				}
-				else if (wParam == 'A') {
-					target = 2;
-				}
-				else if (wParam == 'S') {
-					target = 3;
-				}
-				else {
-					return;
-				}
-				for (int i = 0; i < scene.entities.size(); ++i) {
-					scene.entities[i].health = 1;
-					scene.entities[i].position = scene.entities[target].position;
-				}
-				static vec3 NW = unit_vector(vec3{ -1, -1, 0 });
-				static vec3 NE = unit_vector(vec3{ 1, -1, 0 });
-				static vec3 SE = unit_vector(vec3{ 1, 1, 0 });
-				static vec3 SW = unit_vector(vec3{ -1, 1, 0 });
-				scene.entities[0].momentum = NW;
-				scene.entities[1].momentum = NE;
-				scene.entities[2].momentum = SE;
-				scene.entities[3].momentum = SW;
-
+			if (wParam == 'Q' && scene.entities[0].health > 0) {
+				target = 0;
 			}
+			else if (wParam == 'W' && scene.entities[1].health > 0) {
+				target = 1;
+			}
+			else if (wParam == 'S' && scene.entities[2].health > 0) {
+				target = 2;
+			}
+			else if (wParam == 'A' && scene.entities[3].health > 0) {
+				target = 3;
+			}
+			else {
+				return;
+			}
+
+			if (scene.cooldown) { return; }
+
+			lastExplode = GNow;
+			scene.cooldown = true;
+			for (int i = 0; i < scene.entities.size(); ++i) {
+				scene.entities[i].health = 1;
+				scene.entities[i].setPos(scene.entities[target].getPos());
+			}
+			static vec3 NW = unit_vector(vec3{ -1, -1, 0 });
+			static vec3 NE = unit_vector(vec3{ 1, -1, 0 });
+			static vec3 SE = unit_vector(vec3{ 1, 1, 0 });
+			static vec3 SW = unit_vector(vec3{ -1, 1, 0 });
+			scene.entities[0].momentum = NW; // Q
+			scene.entities[1].momentum = NE; // W
+			scene.entities[2].momentum = SE; // S
+			scene.entities[3].momentum = SW; // A
+
 
 		}
 	}
@@ -156,18 +156,44 @@ public:
 		if (scene.state != State::INGAME) {
 			return;
 		}
+		tickStats(delta);
+		tickMovement(delta);
+		tickCollision(delta);
+		++tickCounter;
+	}
+
+	void tickStats(std::chrono::duration<double, std::milli> delta) {
+		if (scene.cooldown && GNow - lastExplode > cooldownDuration) {
+			scene.cooldown = false;
+		}
+		auto lastPointsTimeDelta = std::chrono::duration_cast<std::chrono::seconds>(GNow - lastPointsTime);
+		if (lastPointsTimeDelta.count() > 2) {
+			lastPointsTime = GNow;
+			scene.points += 100;
+
+		}
+	}
+
+	void wrapAround(Entity& e) {
+		vec3 pos = e.getPos();
+		if (pos.x() < 0.f) { e.setX(359.f); }
+		if (pos.x() > 360.f) { e.setX(1.f); }
+		if (pos.y() < 0.f) { e.setY(359.f); }
+		if (pos.y() > 360.f) { e.setY(1.f); }
+
+	}
+
+	void tickMovement(std::chrono::duration<double, std::milli> delta) {
 		for (int i = 0; i < scene.entities.size(); ++i) {
 			Entity& e = scene.entities[i];
 			if (e.health <= 0) {
 				continue;
 			}
-			e.position += e.momentum;
+			e.moveBy(e.momentum * globalSpeedUp);
 
 			// wraparound mechanic
-			if (e.position.x() < 0.f) { e.position.e[0] = 359.f; }
-			if (e.position.x() > 360.f) { e.position.e[0] = 1.f; }
-			if (e.position.y() < 0.f) { e.position.e[1] = 359.f; }
-			if (e.position.y() > 360.f) { e.position.e[1] = 1.f; }
+			wrapAround(e);
+
 
 		}
 		for (int i = 0; i < scene.obstacles.size(); ++i) {
@@ -175,15 +201,63 @@ public:
 			if (e.health <= 0) {
 				continue;
 			}
-			e.position += e.momentum;
+			e.moveBy(e.momentum * globalSpeedUp);
 
-			// wraparound mechanic
-			if (e.position.x() < 0.f) { e.position.e[0] = 359.f; }
-			if (e.position.x() > 360.f) { e.position.e[0] = 1.f; }
-			if (e.position.y() < 0.f) { e.position.e[1] = 359.f; }
-			if (e.position.y() > 360.f) { e.position.e[1] = 1.f; }
+			wrapAround(e);
 
 		}
+	}
+
+	void tickCollision(std::chrono::duration<double, std::milli> delta) {
+		for (int i = 0; i < scene.obstacles.size(); ++i) {
+			Entity& o1 = scene.obstacles[i];
+			if (o1.health <= 0) {
+				continue;
+			}
+			for (int j = i + 1; j < scene.obstacles.size(); ++j) {
+				Entity& o2 = scene.obstacles[j];
+				if (o2.health <= 0) {
+					continue;
+				}
+				if (isCollision(o1, o2)) {
+					ricochet(o1, o2);
+				}
+
+			}
+			for (int j = 0; j < scene.entities.size(); ++j) {
+				Entity& e = scene.entities[j];
+				if (e.health <= 0) {
+					continue;
+				}
+				if (isCollision(o1, e, cheatFactor)) {
+					killEntity(j);
+				}
+			}
+
+		}
+	}
+
+	void ricochet(Entity& o1, Entity& o2) {
+		//o1
+		vec3 away = o1.getPos() - o2.getPos();
+		// size is equivalent to weight
+		o1.momentum = unit_vector(away + (o1.momentum * o1.size));
+
+		away = -away;
+		o2.momentum = unit_vector(away + (o2.momentum * o2.size));
+	}
+
+
+	void killEntity(size_t id) {
+		scene.entities[id].health = 0;
+		for (const Entity& e : scene.entities) {
+			if (e.health != 0) {
+				return;
+			}
+		}
+		// here all entities have health 0
+		scene.entities[id].health = 1; //< so the player can see their entity on the loss screen
+		enterLOSS();
 	}
 
 	void handleInput(WPARAM wParam, bool keyDown) {
@@ -202,14 +276,84 @@ public:
 		scene.resetEntities();
 		scene.resetObstacles();
 		for (int i = 0; i < scene.obstacles.size(); ++i) {
-			scene.initRandObstacle(i);
+			initRandObstacle(i);
 		}
+		GGameStart = getTime();
 		enterINGAME();
 	}
 
+	void initRandObstacle(size_t id) {
+		static std::mt19937 GEN(46);
+		static std::uniform_int_distribution<int> posDistr(-20, 380);
+		static std::uniform_int_distribution<int> sideDistr(0, 3);
+
+		auto& obstacles = scene.obstacles;
+		obstacles[id].health = 1;
+		bool unique = false;
+		while (!unique) {
+
+			int side = sideDistr(GEN);
+			double pos = static_cast<double>(posDistr(GEN));
+			if (side == 0) { // top
+				vec3 newPos{ pos, 0, 0 };
+				obstacles[id].setPos(newPos);
+			}
+			else if (side == 1) { // right
+				vec3 newPos{ 380, pos, 0 };
+				obstacles[id].setPos(newPos);
+			}
+			else if (side == 2) { // bottom
+				vec3 newPos{ pos, 380.f, 0 };
+				obstacles[id].setPos(newPos);
+			}
+			else { // left
+				vec3 newPos{ 0, pos, 0 };
+				obstacles[id].setPos(newPos);
+			}
+
+			unique = true;
+			for (int i = 0; i < obstacles.size(); ++i) {
+				Entity& o1 = scene.obstacles[i];
+				if (o1.health <= 0 || i == id) {
+					continue;
+				}
+				if (isCollision(obstacles[id], obstacles[i])) {
+					unique = false;
+					break;
+				}
+			}
+		}
+
+		vec3 center{ 180.f, 180.f, 0.f };
+		obstacles[id].momentum = center - obstacles[id].getPos();
+		obstacles[id].momentum = unit_vector(obstacles[id].momentum);
+
+		static std::uniform_int_distribution<uint16_t> sizeDist(9, 13);
+		obstacles[id].size = sizeDist(GEN);
+
+	}
+
+	bool isCollision(const Entity& e1, const Entity& e2, float cheatParam = 0.f) {
+		vec3 delta = e1.getPos() - e2.getPos();
+		//vec3 delta = e1.position - e2.position;
+		float collisionLim = e1.size + e2.size - cheatParam;
+		if (std::abs(delta.e[0]) < collisionLim) {
+			if (std::abs(delta.e[1]) < collisionLim) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+
 private:
+	float cheatFactor = 1.f;
+	float globalSpeedUp = 2.f;
+	uint64_t tickCounter = 0;
 	double cooldownSeconds = 1.0;
+	std::chrono::duration<double, std::milli> cooldownDuration{ 1000.f * cooldownSeconds };
 	std::chrono::time_point<std::chrono::high_resolution_clock> lastExplode;
+	std::chrono::time_point<std::chrono::high_resolution_clock> lastPointsTime;
 	GJScene scene;
 	std::bitset<254> kbMap;
 	irrklang::ISoundEngine* audioEngine;
