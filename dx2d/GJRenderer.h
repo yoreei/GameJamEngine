@@ -42,10 +42,17 @@ public:
 			),
 			&pRenderTarget
 		);
-
 		checkFailed(hr, hWnd);
 
-		// remove antialiasing for retro look
+		// Create a compatible render target for low-res drawing
+		hr = pRenderTarget->CreateCompatibleRenderTarget(
+			D2D1::SizeF(360.0f, 360.0f),
+			&pLowResRenderTarget
+		);
+		checkFailed(hr, hWnd);
+
+		// Disable anti-aliasing for pixelated look
+		pLowResRenderTarget->SetAntialiasMode(D2D1_ANTIALIAS_MODE_ALIASED);
 		pRenderTarget->SetAntialiasMode(D2D1_ANTIALIAS_MODE_ALIASED);
 
 		// Create a solid color brush
@@ -194,13 +201,37 @@ public:
 
 	void draw(std::chrono::duration<double, std::milli> delta) {
 		pRenderTarget->BeginDraw();
+		pLowResRenderTarget->BeginDraw();
 
 		pRenderTarget->Clear(D2D1::ColorF(D2D1::ColorF::Black));
+		pLowResRenderTarget->Clear(D2D1::ColorF(D2D1::ColorF::Black, 0.f));
 
 		drawBorder();
 		(this->*drawCallTable[static_cast<size_t>(scene->state)])();
 
-		HRESULT hr = pRenderTarget->EndDraw();
+		// draw low res rt to main rt
+		pLowResRenderTarget->EndDraw();
+
+		ID2D1Bitmap* pLowResBitmap = nullptr;
+		HRESULT hr = pLowResRenderTarget->GetBitmap(&pLowResBitmap);
+		checkFailed(hr, hWnd);
+
+		// todo: draw pGridBitmap onto pRenderTarget
+		D2D1_RECT_F destRect = D2D1::RectF(
+			0.0f,                         // Left
+			0.0f,                         // Top
+			360.f,  // Right
+			360.f  // Bottom
+		);
+		pRenderTarget->DrawBitmap(
+			pLowResBitmap,                                    // The bitmap to draw
+			&destRect,                                      // Destination rectangle
+			1.0f,                                           // Opacity (1.0f = fully opaque)
+			D2D1_BITMAP_INTERPOLATION_MODE_NEAREST_NEIGHBOR, // Nearest-neighbor for pixelated scaling
+			NULL                                            // Source rectangle (NULL to use the entire bitmap)
+		);
+		pLowResBitmap->Release();
+		hr = pRenderTarget->EndDraw();
 
 		if (hr == D2DERR_RECREATE_TARGET)
 		{
@@ -228,21 +259,6 @@ public:
 	}
 
 	void drawScene() {
-
-		// Create a compatible render target for low-res drawing
-		HRESULT hr = pRenderTarget->CreateCompatibleRenderTarget(
-			D2D1::SizeF(360.0f, 360.0f),
-			&pLowResRenderTarget
-		);
-		if (FAILED(hr))
-		{
-			throw std::runtime_error("");
-		}
-
-		// Disable anti-aliasing for pixelated look
-		pLowResRenderTarget->SetAntialiasMode(D2D1_ANTIALIAS_MODE_ALIASED);
-		pLowResRenderTarget->BeginDraw();
-
 		for (const Entity& e : scene->entities) {
 			e.position;
 			D2D1_RECT_F unitSquare = D2D1::RectF(
@@ -261,30 +277,6 @@ public:
 			pLowResRenderTarget->FillEllipse(ellipse, brushes["green"]);
 
 		}
-		pLowResRenderTarget->EndDraw();
-
-		ID2D1Bitmap* pLowResBitmap = nullptr;
-		hr = pLowResRenderTarget->GetBitmap(&pLowResBitmap);
-
-		// todo: draw pGridBitmap onto pRenderTarget
-		D2D1_RECT_F destRect = D2D1::RectF(
-			0.0f,                         // Left
-			0.0f,                         // Top
-			360.f,  // Right
-			360.f  // Bottom
-		);
-		pRenderTarget->DrawBitmap(
-			pLowResBitmap,                                    // The bitmap to draw
-			&destRect,                                      // Destination rectangle
-			1.0f,                                           // Opacity (1.0f = fully opaque)
-			D2D1_BITMAP_INTERPOLATION_MODE_NEAREST_NEIGHBOR, // Nearest-neighbor for pixelated scaling
-			NULL                                            // Source rectangle (NULL to use the entire bitmap)
-		);
-		pLowResBitmap->Release();
-
-
-
-
 	}
 
 	void drawUI() {
