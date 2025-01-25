@@ -117,7 +117,7 @@
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>%(AdditionalDependencies);irrKlang.lib;kernel32.lib;Dwrite.lib</AdditionalDependencies>
+      <AdditionalDependencies>%(AdditionalDependencies);irrKlang.lib;kernel32.lib;Dwrite.lib;windowscodecs.lib</AdditionalDependencies>
       <AdditionalLibraryDirectories>$(SolutionDir)libs\irrklang;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
@@ -137,7 +137,7 @@
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>$(SolutionDir)libs\irrklang;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>%(AdditionalDependencies);irrKlang.lib;kernel32.lib;Dwrite.lib</AdditionalDependencies>
+      <AdditionalDependencies>%(AdditionalDependencies);irrKlang.lib;kernel32.lib;Dwrite.lib;windowscodecs.lib</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
@@ -176,6 +176,10 @@
     <ResourceCompile Include="dx2d.rc" />
   </ItemGroup>
   <ItemGroup>
+    <CopyFileToFolders Include="..\assets\qLeap.png">
+      <DestinationFolders Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(OutDir)\assets</DestinationFolders>
+      <DestinationFolders Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(OutDir)\assets</DestinationFolders>
+    </CopyFileToFolders>
     <Image Include="dx2d.ico" />
     <Image Include="small.ico" />
   </ItemGroup>

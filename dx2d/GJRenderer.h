@@ -11,6 +11,7 @@
 #include <d2d1helper.h>
 #include <dwrite.h>
 #include <wrl/client.h>
+#include <wincodec.h>
 using Microsoft::WRL::ComPtr;
 
 #include "GJScene.h"
@@ -25,8 +26,10 @@ enum class TextFormat {
 class GJRenderer {
 public:
 	void init(HWND _hWnd, const GJScene* _scene) {
+
 		hWnd = _hWnd;
 		scene = _scene;
+
 		HRESULT hr = D2D1CreateFactory(D2D1_FACTORY_TYPE_SINGLE_THREADED, &pFactory);
 		checkFailed(hr, hWnd);
 
@@ -292,6 +295,104 @@ public:
 		}
 	}
 
+	int drawQLeapIcon() {
+		// Create WIC Factory
+		ComPtr<IWICImagingFactory> pWICFactory;
+		HRESULT hr = CoCreateInstance(
+			CLSID_WICImagingFactory,
+			nullptr,
+			CLSCTX_INPROC_SERVER,
+			IID_PPV_ARGS(&pWICFactory)
+		);
+		if (FAILED(hr))
+		{
+			// Handle the error
+			CoUninitialize();
+			return -1;
+		}
+		// Load the PNG file
+		const wchar_t* filePath = L"assets/qLeap.png"; // Replace with your image path
+
+		ComPtr<IWICBitmapDecoder> pDecoder;
+		hr = pWICFactory->CreateDecoderFromFilename(
+			filePath,
+			nullptr,
+			GENERIC_READ,
+			WICDecodeMetadataCacheOnLoad,
+			&pDecoder
+		);
+		if (FAILED(hr))
+		{
+			// Handle the error (e.g., file not found)
+			CoUninitialize();
+			return -1;
+		}
+
+		// Get the first frame of the image
+		ComPtr<IWICBitmapFrameDecode> pFrame;
+		hr = pDecoder->GetFrame(0, &pFrame);
+		if (FAILED(hr))
+		{
+			// Handle the error
+			CoUninitialize();
+			return -1;
+		}
+
+		// Convert the image format to BGRA, which Direct2D expects
+		ComPtr<IWICFormatConverter> pConverter;
+		hr = pWICFactory->CreateFormatConverter(&pConverter);
+		if (FAILED(hr))
+		{
+			// Handle the error
+			CoUninitialize();
+			return -1;
+		}
+
+		hr = pConverter->Initialize(
+			pFrame.Get(),
+			GUID_WICPixelFormat32bppPBGRA, // Direct2D expects BGRA format with premultiplied alpha
+			WICBitmapDitherTypeNone,
+			nullptr,
+			0.0,
+			WICBitmapPaletteTypeMedianCut
+		);
+		if (FAILED(hr))
+		{
+			// Handle the error
+			CoUninitialize();
+			return -1;
+		}
+
+		ComPtr<ID2D1Bitmap> pD2DBitmap;
+		hr = pRenderTarget->CreateBitmapFromWicBitmap(
+			pConverter.Get(),
+			nullptr, // Bitmap properties; nullptr for default
+			&pD2DBitmap
+		);
+		if (FAILED(hr))
+		{
+			// Handle the error
+			CoUninitialize();
+			return -1;
+		}
+		D2D1_SIZE_F bitmapSize = pD2DBitmap->GetSize();
+		D2D1_RECT_F destinationRect = D2D1::RectF(
+			100.0f,                       // Left
+			100.0f,                       // Top
+			100.0f + bitmapSize.width,    // Right
+			100.0f + bitmapSize.height    // Bottom
+		);
+
+		// Draw the bitmap onto the render target
+		pLowResRenderTarget->DrawBitmap(
+			pD2DBitmap.Get(),
+			&destinationRect,
+			1.0f, // Opacity (1.0f = fully opaque)
+			D2D1_BITMAP_INTERPOLATION_MODE_LINEAR, // Interpolation mode (choose as needed)
+			nullptr // Source rectangle (nullptr to use entire bitmap)
+		);
+	}
+
 	void drawUI() {
 		textFormats[static_cast<size_t>(TextFormat::SMALL)]->SetTextAlignment(DWRITE_TEXT_ALIGNMENT_CENTER);
 		if (scene->explodeCd) {
@@ -314,8 +415,7 @@ public:
 			brushes["blue"]
 		);
 
-
-
+		drawQLeapIcon();
 	}
 
 	void drawBorder() {
