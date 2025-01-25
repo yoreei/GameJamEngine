@@ -30,6 +30,7 @@ public:
 		HRESULT hr = D2D1CreateFactory(D2D1_FACTORY_TYPE_SINGLE_THREADED, &pFactory);
 		checkFailed(hr, hWnd);
 
+
 		// Get the size of the client area
 		RECT rc;
 		GetClientRect(hWnd, &rc);
@@ -175,6 +176,11 @@ public:
 			pFactory = nullptr;
 		}
 
+		if (pLowResRenderTarget) {
+			pLowResRenderTarget->Release();
+
+		}
+
 	}
 
 	void wmResize(HWND hwnd) {
@@ -222,29 +228,62 @@ public:
 	}
 
 	void drawScene() {
+
+		// Create a compatible render target for low-res drawing
+		HRESULT hr = pRenderTarget->CreateCompatibleRenderTarget(
+			D2D1::SizeF(360.0f, 360.0f),
+			&pLowResRenderTarget
+		);
+		if (FAILED(hr))
+		{
+			throw std::runtime_error("");
+		}
+
+		// Disable anti-aliasing for pixelated look
+		pLowResRenderTarget->SetAntialiasMode(D2D1_ANTIALIAS_MODE_ALIASED);
+		pLowResRenderTarget->BeginDraw();
+
 		for (const Entity& e : scene->entities) {
 			e.position;
 			D2D1_RECT_F unitSquare = D2D1::RectF(
 				e.position.e[0], e.position.e[1],
 				e.position.e[0] + e.size, e.position.e[1] + e.size
 			);
-			pRenderTarget->DrawRectangle(unitSquare, brushes["blue"], 2.f);
+			pLowResRenderTarget->DrawRectangle(unitSquare, brushes["blue"], 2.f);
 		}
 		for (const Entity& o : scene->obstacles) {
 			o.position;
-			//D2D1_RECT_F unitSquare = D2D1::RectF(
-			//	o.position.e[0], o.position.e[1],
-			//	o.position.e[0] + o.size, o.position.e[1] + o.size
-			//);
-			//pRenderTarget->DrawRectangle(unitSquare, brushes["green"], 2.f);
 			D2D1_ELLIPSE ellipse = D2D1::Ellipse(
 				D2D1::Point2F(o.position.x(), o.position.y()), // Center point (x, y)
 				o.size,                         // Radius X
 				o.size                          // Radius Y
 			);
-			pRenderTarget->FillEllipse(ellipse, brushes["green"]);
+			pLowResRenderTarget->FillEllipse(ellipse, brushes["green"]);
 
 		}
+		pLowResRenderTarget->EndDraw();
+
+		ID2D1Bitmap* pLowResBitmap = nullptr;
+		hr = pLowResRenderTarget->GetBitmap(&pLowResBitmap);
+
+		// todo: draw pGridBitmap onto pRenderTarget
+		D2D1_RECT_F destRect = D2D1::RectF(
+			0.0f,                         // Left
+			0.0f,                         // Top
+			360.f,  // Right
+			360.f  // Bottom
+		);
+		pRenderTarget->DrawBitmap(
+			pLowResBitmap,                                    // The bitmap to draw
+			&destRect,                                      // Destination rectangle
+			1.0f,                                           // Opacity (1.0f = fully opaque)
+			D2D1_BITMAP_INTERPOLATION_MODE_NEAREST_NEIGHBOR, // Nearest-neighbor for pixelated scaling
+			NULL                                            // Source rectangle (NULL to use the entire bitmap)
+		);
+		pLowResBitmap->Release();
+
+
+
 
 	}
 
@@ -348,6 +387,7 @@ private:
 	HWND hWnd;
 	const GJScene* scene = nullptr;
 	ID2D1HwndRenderTarget* pRenderTarget = nullptr;
+	ID2D1BitmapRenderTarget* pLowResRenderTarget = nullptr;
 	ID2D1Factory* pFactory = nullptr;
 	std::map<std::string, ID2D1SolidColorBrush*> brushes = {
 		{"black", nullptr },
