@@ -109,8 +109,10 @@ struct GJScene {
 	//std::array<int, 255> keybinds;
 	//Entity playerController;
 	State state = State::MAINMENU;
-	bool cooldown = true;
-	uint64_t points = 0;
+	bool explodeCd = false;
+	bool qLeapCd = false;
+	bool qLeapActive = false;
+	uint64_t points = 100;
 	//v entities move
 	std::array<Entity, 4> entities{};
 	std::array<Entity, 24> obstacles{};

@@ -262,17 +262,20 @@ public:
 	}
 
 	void drawScene() {
-		for (const Entity& e : scene->entities) {
-			if (e.health <= 0) {
-				continue;
-			}
 
-			vec3 pos = e.getPos();
-			D2D1_RECT_F unitSquare = D2D1::RectF(
-				e.getPos().e[0], pos.e[1],
-				e.getPos().e[0] + e.size, pos.e[1] + e.size
-			);
-			pLowResRenderTarget->DrawRectangle(unitSquare, brushes["blue"], 2.f);
+		if (!scene->qLeapActive) {
+			for (const Entity& e : scene->entities) {
+				if (e.health <= 0) {
+					continue;
+				}
+
+				vec3 pos = e.getPos();
+				D2D1_RECT_F unitSquare = D2D1::RectF(
+					e.getPos().e[0], pos.e[1],
+					e.getPos().e[0] + e.size, pos.e[1] + e.size
+				);
+				pLowResRenderTarget->DrawRectangle(unitSquare, brushes["blue"], 2.f);
+			}
 		}
 		for (const Entity& o : scene->obstacles) {
 			if (o.health <= 0) {
@@ -291,7 +294,7 @@ public:
 
 	void drawUI() {
 		textFormats[static_cast<size_t>(TextFormat::SMALL)]->SetTextAlignment(DWRITE_TEXT_ALIGNMENT_CENTER);
-		if (scene->cooldown) {
+		if (scene->explodeCd) {
 			pLowResRenderTarget->DrawText(
 				L"cd!",    // Text to render
 				wcslen(L"cd!"),

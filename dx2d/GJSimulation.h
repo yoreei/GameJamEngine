@@ -35,40 +35,21 @@ public:
 				return;
 			}
 
-			size_t target = 0;
-
-			if (wParam == 'Q' && scene.entities[0].health > 0) {
-				target = 0;
+			if (wParam == 'Q') {
+				castExplode(0);
 			}
-			else if (wParam == 'W' && scene.entities[1].health > 0) {
-				target = 1;
+			else if (wParam == 'W') {
+				castExplode(1);
 			}
-			else if (wParam == 'S' && scene.entities[2].health > 0) {
-				target = 2;
+			else if (wParam == 'S') {
+				castExplode(2);
 			}
-			else if (wParam == 'A' && scene.entities[3].health > 0) {
-				target = 3;
+			else if (wParam == 'A') {
+				castExplode(3);
 			}
-			else {
-				return;
+			else if (wParam == VK_SPACE) {
+				castQLeap();
 			}
-
-			if (scene.cooldown) { return; }
-
-			lastExplode = GNow;
-			scene.cooldown = true;
-			for (int i = 0; i < scene.entities.size(); ++i) {
-				scene.entities[i].health = 1;
-				scene.entities[i].setPos(scene.entities[target].getPos());
-			}
-			static vec3 NW = unit_vector(vec3{ -1, -1, 0 });
-			static vec3 NE = unit_vector(vec3{ 1, -1, 0 });
-			static vec3 SE = unit_vector(vec3{ 1, 1, 0 });
-			static vec3 SW = unit_vector(vec3{ -1, 1, 0 });
-			scene.entities[0].momentum = NW; // Q
-			scene.entities[1].momentum = NE; // W
-			scene.entities[2].momentum = SE; // S
-			scene.entities[3].momentum = SW; // A
 
 
 		}
@@ -105,6 +86,37 @@ public:
 				exit(0);
 			}
 		}
+
+	}
+
+	void castQLeap() {
+		if (!scene.qLeapCd) {
+			scene.qLeapCd = true;
+			scene.qLeapActive = true;
+			lastQLeap = GNow;
+		}
+
+	}
+	void castExplode(size_t target) {
+		if (scene.explodeCd) { return; }
+		if (scene.points < 100) { return; }
+		if (scene.entities[target].health <= 0) { return; }
+
+		scene.points -= 100;
+		lastExplode = GNow;
+		scene.explodeCd = true;
+		for (int i = 0; i < scene.entities.size(); ++i) {
+			scene.entities[i].health = 1;
+			scene.entities[i].setPos(scene.entities[target].getPos());
+		}
+		static vec3 NW = unit_vector(vec3{ -1, -1, 0 });
+		static vec3 NE = unit_vector(vec3{ 1, -1, 0 });
+		static vec3 SE = unit_vector(vec3{ 1, 1, 0 });
+		static vec3 SW = unit_vector(vec3{ -1, 1, 0 });
+		scene.entities[0].momentum = NW; // Q
+		scene.entities[1].momentum = NE; // W
+		scene.entities[2].momentum = SE; // S
+		scene.entities[3].momentum = SW; // A
 
 	}
 
@@ -163,14 +175,21 @@ public:
 	}
 
 	void tickStats(std::chrono::duration<double, std::milli> delta) {
-		if (scene.cooldown && GNow - lastExplode > cooldownDuration) {
-			scene.cooldown = false;
+		if (scene.explodeCd && GNow - lastExplode > explodeCdSeconds) {
+			scene.explodeCd = false;
 		}
-		auto lastPointsTimeDelta = std::chrono::duration_cast<std::chrono::seconds>(GNow - lastPointsTime);
-		if (lastPointsTimeDelta.count() > 2) {
+		if (GNow - lastPointsTime > pointsCdSeconds) {
 			lastPointsTime = GNow;
 			scene.points += 100;
 
+		}
+
+		if (scene.qLeapActive && GNow - lastQLeap > qLeapDuration) {
+			scene.qLeapActive = false;
+
+		}
+		if (scene.qLeapCd && GNow - lastQLeap > qLeapCdSeconds) {
+			scene.qLeapCd = false;
 		}
 	}
 
@@ -184,17 +203,17 @@ public:
 	}
 
 	void tickMovement(std::chrono::duration<double, std::milli> delta) {
-		for (int i = 0; i < scene.entities.size(); ++i) {
-			Entity& e = scene.entities[i];
-			if (e.health <= 0) {
-				continue;
+		if (!scene.qLeapActive) {
+			for (int i = 0; i < scene.entities.size(); ++i) {
+				Entity& e = scene.entities[i];
+				if (e.health <= 0) {
+					continue;
+				}
+				e.moveBy(e.momentum * globalSpeedUp);
+
+				// wraparound mechanic
+				wrapAround(e);
 			}
-			e.moveBy(e.momentum * globalSpeedUp);
-
-			// wraparound mechanic
-			wrapAround(e);
-
-
 		}
 		for (int i = 0; i < scene.obstacles.size(); ++i) {
 			Entity& e = scene.obstacles[i];
@@ -224,13 +243,16 @@ public:
 				}
 
 			}
-			for (int j = 0; j < scene.entities.size(); ++j) {
-				Entity& e = scene.entities[j];
-				if (e.health <= 0) {
-					continue;
-				}
-				if (isCollision(o1, e, cheatFactor)) {
-					killEntity(j);
+
+			if (!scene.qLeapActive) {
+				for (int j = 0; j < scene.entities.size(); ++j) {
+					Entity& e = scene.entities[j];
+					if (e.health <= 0) {
+						continue;
+					}
+					if (isCollision(o1, e, cheatFactor)) {
+						killEntity(j);
+					}
 				}
 			}
 
@@ -273,12 +295,14 @@ public:
 			MessageBox(NULL, L"Could not play ingame.mp3", L"Error", MB_OK);
 		}
 
+		scene = GJScene();
 		scene.resetEntities();
 		scene.resetObstacles();
 		for (int i = 0; i < scene.obstacles.size(); ++i) {
 			initRandObstacle(i);
 		}
 		GGameStart = getTime();
+		scene.points = 100;
 		enterINGAME();
 	}
 
@@ -350,9 +374,12 @@ private:
 	float cheatFactor = 1.f;
 	float globalSpeedUp = 2.f;
 	uint64_t tickCounter = 0;
-	double cooldownSeconds = 1.0;
-	std::chrono::duration<double, std::milli> cooldownDuration{ 1000.f * cooldownSeconds };
+	std::chrono::duration<double> explodeCdSeconds{ 1.6f };
+	std::chrono::duration<double> qLeapCdSeconds{ 12.f };
+	std::chrono::duration<double> qLeapDuration{ 2.f };
+	std::chrono::duration<double> pointsCdSeconds{ 2.f };
 	std::chrono::time_point<std::chrono::high_resolution_clock> lastExplode;
+	std::chrono::time_point<std::chrono::high_resolution_clock> lastQLeap;
 	std::chrono::time_point<std::chrono::high_resolution_clock> lastPointsTime;
 	GJScene scene;
 	std::bitset<254> kbMap;
