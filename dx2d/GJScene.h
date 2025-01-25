@@ -111,6 +111,6 @@ struct GJScene {
 	Entity playerController;
 	//v entities move
 	std::array<Entity, 4> entities{};
-	std::array<Entity, 20> obstacles{};
+	std::array<Entity, 1> obstacles{};
 	static inline Entity emptyEntity;
 };
