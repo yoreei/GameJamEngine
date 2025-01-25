@@ -40,6 +40,7 @@ struct Entity {
 	vec3 position;
 	//vec3 direction;
 	vec3 momentum;
+	float size = 2.f;
 };
 
 class Obstacle {
@@ -62,6 +63,7 @@ struct GJScene {
 		entities.fill(GJScene::emptyEntity);
 		for (int i = 0; i < entities.size(); ++i) {
 			entities[i].health = 1;
+			entities[i].size = 2.f;
 			entities[i].position = vec3{ 180.f, 240.f, 0.f };
 		}
 		//keybinds['Q'] = 0;
@@ -103,6 +105,10 @@ struct GJScene {
 		vec3 center{ 180.f, 180.f, 0.f };
 		obstacles[id].momentum = center - obstacles[id].position;
 		obstacles[id].momentum = unit_vector(obstacles[id].momentum);
+
+		static std::uniform_real_distribution<float> sizeDist(3.f, 9.f);
+		obstacles[id].size = sizeDist(GEN) ;
+
 
 	}
 

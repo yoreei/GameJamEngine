@@ -8,6 +8,7 @@
 
 #include <windows.h>
 #include <d2d1.h>
+#include <d2d1helper.h>
 #include <dwrite.h>
 #include <wrl/client.h>
 using Microsoft::WRL::ComPtr;
@@ -32,8 +33,6 @@ public:
 		// Get the size of the client area
 		RECT rc;
 		GetClientRect(hWnd, &rc);
-
-		// Create a render target
 		hr = pFactory->CreateHwndRenderTarget(
 			D2D1::RenderTargetProperties(),
 			D2D1::HwndRenderTargetProperties(
@@ -44,6 +43,9 @@ public:
 		);
 
 		checkFailed(hr, hWnd);
+
+		// remove antialiasing for retro look
+		pRenderTarget->SetAntialiasMode(D2D1_ANTIALIAS_MODE_ALIASED);
 
 		// Create a solid color brush
 		hr = pRenderTarget->CreateSolidColorBrush(
@@ -224,17 +226,24 @@ public:
 			e.position;
 			D2D1_RECT_F unitSquare = D2D1::RectF(
 				e.position.e[0], e.position.e[1],
-				e.position.e[0] + 2.f, e.position.e[1] + 2.f
+				e.position.e[0] + e.size, e.position.e[1] + e.size
 			);
 			pRenderTarget->DrawRectangle(unitSquare, brushes["blue"], 2.f);
 		}
 		for (const Entity& o : scene->obstacles) {
 			o.position;
-			D2D1_RECT_F unitSquare = D2D1::RectF(
-				o.position.e[0], o.position.e[1],
-				o.position.e[0] + 2.f, o.position.e[1] + 2.f
+			//D2D1_RECT_F unitSquare = D2D1::RectF(
+			//	o.position.e[0], o.position.e[1],
+			//	o.position.e[0] + o.size, o.position.e[1] + o.size
+			//);
+			//pRenderTarget->DrawRectangle(unitSquare, brushes["green"], 2.f);
+			D2D1_ELLIPSE ellipse = D2D1::Ellipse(
+				D2D1::Point2F(o.position.x(), o.position.y()), // Center point (x, y)
+				o.size,                         // Radius X
+				o.size                          // Radius Y
 			);
-			pRenderTarget->DrawRectangle(unitSquare, brushes["green"], 2.f);
+			pRenderTarget->FillEllipse(ellipse, brushes["green"]);
+
 		}
 
 	}
