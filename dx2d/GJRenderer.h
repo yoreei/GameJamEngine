@@ -22,6 +22,10 @@ enum class TextFormat {
 	SMALL,
 	size
 };
+enum EBitmap {
+	QLeap = 0,
+	size
+};
 
 class GJRenderer {
 public:
@@ -30,7 +34,17 @@ public:
 		hWnd = _hWnd;
 		scene = _scene;
 
-		HRESULT hr = D2D1CreateFactory(D2D1_FACTORY_TYPE_SINGLE_THREADED, &pFactory);
+		// Create WIC Factory
+		HRESULT hr = CoCreateInstance(
+			CLSID_WICImagingFactory,
+			nullptr,
+			CLSCTX_INPROC_SERVER,
+			IID_PPV_ARGS(&pWICFactory)
+		);
+		checkFailed(hr, hWnd);
+
+
+		hr = D2D1CreateFactory(D2D1_FACTORY_TYPE_SINGLE_THREADED, &pFactory);
 		checkFailed(hr, hWnd);
 
 
@@ -57,6 +71,11 @@ public:
 		// Disable anti-aliasing for pixelated look
 		pLowResRenderTarget->SetAntialiasMode(D2D1_ANTIALIAS_MODE_ALIASED);
 		pRenderTarget->SetAntialiasMode(D2D1_ANTIALIAS_MODE_ALIASED);
+
+		loadImage(L"assets/qLeap.png", EBitmap::QLeap);
+		if (EBitmap::size != 1) {
+			MessageBox(NULL, L"update bitmaps!", L"Error", MB_OK);
+		}
 
 		// Create a solid color brush
 		hr = pRenderTarget->CreateSolidColorBrush(
@@ -295,58 +314,27 @@ public:
 		}
 	}
 
-	int drawQLeapIcon() {
-		// Create WIC Factory
-		ComPtr<IWICImagingFactory> pWICFactory;
-		HRESULT hr = CoCreateInstance(
-			CLSID_WICImagingFactory,
-			nullptr,
-			CLSCTX_INPROC_SERVER,
-			IID_PPV_ARGS(&pWICFactory)
-		);
-		if (FAILED(hr))
-		{
-			// Handle the error
-			CoUninitialize();
-			return -1;
-		}
-		// Load the PNG file
-		const wchar_t* filePath = L"assets/qLeap.png"; // Replace with your image path
+	void loadImage(const std::wstring& filePath, EBitmap eBitmap) {
 
 		ComPtr<IWICBitmapDecoder> pDecoder;
-		hr = pWICFactory->CreateDecoderFromFilename(
-			filePath,
+		HRESULT hr = pWICFactory->CreateDecoderFromFilename(
+			filePath.c_str(),
 			nullptr,
 			GENERIC_READ,
 			WICDecodeMetadataCacheOnLoad,
 			&pDecoder
 		);
-		if (FAILED(hr))
-		{
-			// Handle the error (e.g., file not found)
-			CoUninitialize();
-			return -1;
-		}
+		checkFailed(hr, hWnd);
 
 		// Get the first frame of the image
 		ComPtr<IWICBitmapFrameDecode> pFrame;
 		hr = pDecoder->GetFrame(0, &pFrame);
-		if (FAILED(hr))
-		{
-			// Handle the error
-			CoUninitialize();
-			return -1;
-		}
+		checkFailed(hr, hWnd);
 
 		// Convert the image format to BGRA, which Direct2D expects
 		ComPtr<IWICFormatConverter> pConverter;
 		hr = pWICFactory->CreateFormatConverter(&pConverter);
-		if (FAILED(hr))
-		{
-			// Handle the error
-			CoUninitialize();
-			return -1;
-		}
+		checkFailed(hr, hWnd);
 
 		hr = pConverter->Initialize(
 			pFrame.Get(),
@@ -356,26 +344,19 @@ public:
 			0.0,
 			WICBitmapPaletteTypeMedianCut
 		);
-		if (FAILED(hr))
-		{
-			// Handle the error
-			CoUninitialize();
-			return -1;
-		}
+		checkFailed(hr, hWnd);
 
-		ComPtr<ID2D1Bitmap> pD2DBitmap;
 		hr = pRenderTarget->CreateBitmapFromWicBitmap(
 			pConverter.Get(),
 			nullptr, // Bitmap properties; nullptr for default
-			&pD2DBitmap
+			&bitmaps[eBitmap]
 		);
-		if (FAILED(hr))
-		{
-			// Handle the error
-			CoUninitialize();
-			return -1;
-		}
-		D2D1_SIZE_F bitmapSize = pD2DBitmap->GetSize();
+		checkFailed(hr, hWnd);
+	}
+
+	void drawQLeapIcon() {
+
+		D2D1_SIZE_F bitmapSize = bitmaps[EBitmap::QLeap]->GetSize();
 		D2D1_RECT_F destinationRect = D2D1::RectF(
 			100.0f,                       // Left
 			100.0f,                       // Top
@@ -385,7 +366,7 @@ public:
 
 		// Draw the bitmap onto the render target
 		pLowResRenderTarget->DrawBitmap(
-			pD2DBitmap.Get(),
+			bitmaps[EBitmap::QLeap].Get(),
 			&destinationRect,
 			1.0f, // Opacity (1.0f = fully opaque)
 			D2D1_BITMAP_INTERPOLATION_MODE_LINEAR, // Interpolation mode (choose as needed)
@@ -516,6 +497,7 @@ private:
 	ID2D1HwndRenderTarget* pRenderTarget = nullptr;
 	ID2D1BitmapRenderTarget* pLowResRenderTarget = nullptr;
 	ID2D1Factory* pFactory = nullptr;
+	ComPtr<IWICImagingFactory> pWICFactory = nullptr;
 	std::map<std::string, ID2D1SolidColorBrush*> brushes = {
 		{"black", nullptr },
 		{"green", nullptr },
@@ -525,5 +507,6 @@ private:
 	using DrawFunction = void(GJRenderer::*)();
 	std::array<DrawFunction, static_cast<size_t>(State::size)> drawCallTable;
 
+	std::array<ComPtr<ID2D1Bitmap>, EBitmap::size> bitmaps;
 };
 
