@@ -24,6 +24,7 @@ enum class TextFormat {
 };
 enum EBitmap {
 	QLeap = 0,
+	Explode,
 	size
 };
 
@@ -73,7 +74,8 @@ public:
 		pRenderTarget->SetAntialiasMode(D2D1_ANTIALIAS_MODE_ALIASED);
 
 		loadImage(L"assets/qLeap.png", EBitmap::QLeap);
-		if (EBitmap::size != 1) {
+		loadImage(L"assets/explode.png", EBitmap::Explode);
+		if (EBitmap::size != 2) {
 			MessageBox(NULL, L"update bitmaps!", L"Error", MB_OK);
 		}
 
@@ -101,6 +103,12 @@ public:
 			&brushes["blue"]
 		);
 		checkFailed(hr, hWnd);
+		hr = pRenderTarget->CreateSolidColorBrush(
+			D2D1::ColorF(D2D1::ColorF(1.f, 1.f, 1.f)),
+			&brushes["white"]
+		);
+		checkFailed(hr, hWnd);
+
 
 		IDWriteFactory* pDWriteFactory = nullptr;
 		hr = DWriteCreateFactory(DWRITE_FACTORY_TYPE_SHARED, __uuidof(IDWriteFactory), reinterpret_cast<IUnknown**>(&pDWriteFactory));
@@ -354,49 +362,42 @@ public:
 		checkFailed(hr, hWnd);
 	}
 
-	void drawQLeapIcon() {
-
-		D2D1_SIZE_F bitmapSize = bitmaps[EBitmap::QLeap]->GetSize();
-		D2D1_RECT_F destinationRect = D2D1::RectF(
-			100.0f,                       // Left
-			100.0f,                       // Top
-			100.0f + bitmapSize.width,    // Right
-			100.0f + bitmapSize.height    // Bottom
-		);
-
-		// Draw the bitmap onto the render target
-		pLowResRenderTarget->DrawBitmap(
-			bitmaps[EBitmap::QLeap].Get(),
-			&destinationRect,
-			1.0f, // Opacity (1.0f = fully opaque)
-			D2D1_BITMAP_INTERPOLATION_MODE_LINEAR, // Interpolation mode (choose as needed)
-			nullptr // Source rectangle (nullptr to use entire bitmap)
-		);
-	}
-
 	void drawUI() {
-		textFormats[static_cast<size_t>(TextFormat::SMALL)]->SetTextAlignment(DWRITE_TEXT_ALIGNMENT_CENTER);
 		if (scene->explodeCd) {
-			pLowResRenderTarget->DrawText(
-				L"cd!",    // Text to render
-				wcslen(L"cd!"),
-				textFormats[static_cast<size_t>(TextFormat::SMALL)],            // Text format
-				D2D1::RectF(0, 340, 360, 360), // Layout rectangle
-				brushes["blue"]
+			D2D1_SIZE_F bitmapSize = bitmaps[EBitmap::Explode]->GetSize();
+			bitmapSize.height *= 2;
+			bitmapSize.width *= 2;
+			pLowResRenderTarget->DrawBitmap(
+				bitmaps[EBitmap::Explode].Get(),
+				D2D1::RectF(160, 325, 160 + bitmapSize.width, 325 + bitmapSize.height),
+				1.0f, // Opacity (1.0f = fully opaque)
+				D2D1_BITMAP_INTERPOLATION_MODE_NEAREST_NEIGHBOR,
+				nullptr // Source rectangle (nullptr to use entire bitmap)
 			);
 		}
 		std::wstring wPoints = std::to_wstring(scene->points);
 
 		textFormats[static_cast<size_t>(TextFormat::SMALL)]->SetTextAlignment(DWRITE_TEXT_ALIGNMENT_TRAILING);
-		pLowResRenderTarget->DrawText(
+		pRenderTarget->DrawText(
 			wPoints.c_str(),    // Text to render
 			wcslen(wPoints.c_str()),
 			textFormats[static_cast<size_t>(TextFormat::SMALL)],            // Text format
-			D2D1::RectF(0, 340, 360, 360), // Layout rectangle
-			brushes["blue"]
+			D2D1::RectF(0, 335, 345, 360), // Layout rectangle
+			brushes["white"]
 		);
 
-		drawQLeapIcon();
+		D2D1_SIZE_F bitmapSize = bitmaps[EBitmap::QLeap]->GetSize();
+		bitmapSize.height *= 2;
+		bitmapSize.width *= 2;
+		pLowResRenderTarget->DrawBitmap(
+			bitmaps[EBitmap::QLeap].Get(),
+			D2D1::RectF(15, 325, 15 + bitmapSize.width, 325 + bitmapSize.height),
+			1.0f, // Opacity (1.0f = fully opaque)
+			D2D1_BITMAP_INTERPOLATION_MODE_NEAREST_NEIGHBOR,
+			nullptr // Source rectangle (nullptr to use entire bitmap)
+		);
+
+
 	}
 
 	void drawBorder() {
