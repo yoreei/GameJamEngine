@@ -6,10 +6,20 @@
 #include <array>
 #include <stdexcept>
 
+#include <windows.h>
 #include <d2d1.h>
 #include <dwrite.h>
+#include <wrl/client.h>
+using Microsoft::WRL::ComPtr;
 
 #include "GJScene.h"
+
+enum class TextFormat {
+	HEADING = 0,
+	NORMAL,
+	SMALL,
+	size
+};
 
 class GJRenderer {
 public:
@@ -64,45 +74,49 @@ public:
 		hr = DWriteCreateFactory(DWRITE_FACTORY_TYPE_SHARED, __uuidof(IDWriteFactory), reinterpret_cast<IUnknown**>(&pDWriteFactory));
 
 		hr = pDWriteFactory->CreateTextFormat(
-			L"Arial",                // Font family
+			L"Press Start 2P",                // Font family
 			nullptr,                 // Font collection
 			DWRITE_FONT_WEIGHT_NORMAL,
 			DWRITE_FONT_STYLE_NORMAL,
 			DWRITE_FONT_STRETCH_NORMAL,
-			42.0f,                   // Font size
+			30.0f,                   // Font size
 			L"",                     // Locale
 			&textFormats[static_cast<size_t>(TextFormat::HEADING)]
 		);
+		hr = textFormats[static_cast<size_t>(TextFormat::HEADING)]->SetTextAlignment(DWRITE_TEXT_ALIGNMENT_CENTER);
+		hr = textFormats[static_cast<size_t>(TextFormat::HEADING)]->SetParagraphAlignment(DWRITE_PARAGRAPH_ALIGNMENT_NEAR);
 
 		hr = pDWriteFactory->CreateTextFormat(
-			L"Arial",                // Font family
-			nullptr,                 // Font collection
-			DWRITE_FONT_WEIGHT_NORMAL,
-			DWRITE_FONT_STYLE_NORMAL,
-			DWRITE_FONT_STRETCH_NORMAL,
-			24.0f,                   // Font size
-			L"",                     // Locale
-			&textFormats[static_cast<size_t>(TextFormat::NORMAL)]
-		);
-
-		hr = pDWriteFactory->CreateTextFormat(
-			L"Arial",                // Font family
+			L"Press Start 2P",                // Font family
 			nullptr,                 // Font collection
 			DWRITE_FONT_WEIGHT_NORMAL,
 			DWRITE_FONT_STYLE_NORMAL,
 			DWRITE_FONT_STRETCH_NORMAL,
 			16.0f,                   // Font size
 			L"",                     // Locale
+			&textFormats[static_cast<size_t>(TextFormat::NORMAL)]
+		);
+		hr = textFormats[static_cast<size_t>(TextFormat::NORMAL)]->SetTextAlignment(DWRITE_TEXT_ALIGNMENT_CENTER);
+		hr = textFormats[static_cast<size_t>(TextFormat::NORMAL)]->SetParagraphAlignment(DWRITE_PARAGRAPH_ALIGNMENT_NEAR);
+
+		hr = pDWriteFactory->CreateTextFormat(
+			L"Press Start 2P",                // Font family
+			nullptr,                 // Font collection
+			DWRITE_FONT_WEIGHT_NORMAL,
+			DWRITE_FONT_STYLE_NORMAL,
+			DWRITE_FONT_STRETCH_NORMAL,
+			12.0f,                   // Font size
+			L"",                     // Locale
 			&textFormats[static_cast<size_t>(TextFormat::SMALL)]
 		);
+		hr = textFormats[static_cast<size_t>(TextFormat::SMALL)]->SetTextAlignment(DWRITE_TEXT_ALIGNMENT_LEADING);
+		hr = textFormats[static_cast<size_t>(TextFormat::SMALL)]->SetParagraphAlignment(DWRITE_PARAGRAPH_ALIGNMENT_NEAR);
+
+
 		if (static_cast<size_t>(TextFormat::size) != 3) {
 			MessageBox(NULL, L"update textformat", L"Error", MB_OK);
 			exit(-1);
 		}
-
-		// Set Text Alignment
-		hr = pTextFormat->SetTextAlignment(DWRITE_TEXT_ALIGNMENT_LEADING);
-		hr = pTextFormat->SetParagraphAlignment(DWRITE_PARAGRAPH_ALIGNMENT_NEAR);
 
 		// Setup transformations
 		int screenWidth = GetSystemMetrics(SM_CXSCREEN);
@@ -175,7 +189,7 @@ public:
 
 		pRenderTarget->Clear(D2D1::ColorF(D2D1::ColorF::Black));
 
-		// 
+		drawBorder();
 		(this->*drawCallTable[static_cast<size_t>(scene->state)])();
 
 		HRESULT hr = pRenderTarget->EndDraw();
@@ -196,25 +210,40 @@ public:
 		drawMenu("Main Menu");
 	}
 	void drawLOSS() {
-		drawMenu("Loss");
+		drawEnd(L"Loss");
 	}
 	void drawWIN() {
-		drawMenu("Victory");
+		drawEnd(L"Victory");
 	}
 	void drawPAUSED() {
-		drawMenu("Paused");
+		drawPaused();
 	}
 
 	void drawScene() {
-		D2D1_RECT_F unitSquare = D2D1::RectF(
-			20.f, 20.f,
-			100.f, 100.f
-		);
-		pRenderTarget->DrawRectangle(unitSquare, brushes["green"], 3.f);
+		for (const Entity& e : scene->entities) {
+			e.position;
+			D2D1_RECT_F unitSquare = D2D1::RectF(
+				e.position.e[0], e.position.e[1],
+				e.position.e[0] + 2.f, e.position.e[1] + 2.f
+			);
+			pRenderTarget->DrawRectangle(unitSquare, brushes["blue"], 2.f);
+		}
+		for (const Entity& o : scene->obstacles) {
+			o.position;
+			D2D1_RECT_F unitSquare = D2D1::RectF(
+				o.position.e[0], o.position.e[1],
+				o.position.e[0] + 2.f, o.position.e[1] + 2.f
+			);
+			pRenderTarget->DrawRectangle(unitSquare, brushes["green"], 2.f);
+		}
 
 	}
 
 	void drawUI() {
+
+	}
+
+	void drawBorder() {
 		D2D1_RECT_F unitSquare = D2D1::RectF(
 			0.f, 0.f,
 			360.f, 360.f
@@ -223,20 +252,74 @@ public:
 
 	}
 
+	void drawPaused() {
+		pRenderTarget->DrawText(
+			L"Paused",    // Text to render
+			wcslen(L"Paused"),
+			textFormats[static_cast<size_t>(TextFormat::HEADING)],            // Text format
+			D2D1::RectF(0, 40, 360, 180), // Layout rectangle
+			brushes["blue"]
+		);
+
+		std::wstring t = L"[ESC] Resume\n[R] Reload\n[BSPACE] Quit";
+		pRenderTarget->DrawText(
+			t.c_str(),    // Text to render
+			wcslen(t.c_str()),
+			textFormats[static_cast<size_t>(TextFormat::NORMAL)],            // Text format
+			D2D1::RectF(0, 180, 320, 210), // Layout rectangle
+			brushes["blue"]
+		);
+	}
+
+	void drawEnd(const std::wstring& text) {
+		pRenderTarget->DrawText(
+			text.c_str(),    // Text to render
+			wcslen(text.c_str()),
+			textFormats[static_cast<size_t>(TextFormat::HEADING)],            // Text format
+			D2D1::RectF(0, 40, 360, 180), // Layout rectangle
+			brushes["blue"]
+		);
+
+		pRenderTarget->DrawText(
+			L"[R] Reload\n[BSPACE] Quit",    // Text to render
+			wcslen(L"[R] Reload\n[BSPACE] Quit"),
+			textFormats[static_cast<size_t>(TextFormat::NORMAL)],            // Text format
+			D2D1::RectF(0, 180, 320, 210), // Layout rectangle
+			brushes["blue"]
+		);
+
+	}
 	void drawMenu(const std::string& text) {
 		// todo
 		pRenderTarget->DrawText(
-			L"Hello, Direct2D!",    // Text to render
-			wcslen(L"Hello, Direct2D!"),
+			L"Electric\nBubble\nBath!",    // Text to render
+			wcslen(L"Electric\nBubble\nBath!"),
 			textFormats[static_cast<size_t>(TextFormat::HEADING)],            // Text format
-			D2D1::RectF(50, 50, 400, 100), // Layout rectangle
+			D2D1::RectF(0, 40, 360, 180), // Layout rectangle
 			brushes["blue"]
 		);
-		D2D1_RECT_F unitSquare = D2D1::RectF(
-			20.f, 20.f,
-			100.f, 100.f
+
+		pRenderTarget->DrawText(
+			L"[ENTER] Game\n[BSPACE] Quit",    // Text to render
+			wcslen(L"[ENTER] Game\nF[BSPACE] Quit"),
+			textFormats[static_cast<size_t>(TextFormat::NORMAL)],            // Text format
+			D2D1::RectF(0, 180, 320, 210), // Layout rectangle
+			brushes["blue"]
 		);
-		pRenderTarget->DrawRectangle(unitSquare, brushes["blue"], 3.f);
+
+		//pRenderTarget->DrawText(
+		//	L"[F10] Terminate Program",    // Text to render
+		//	wcslen(L"[F10] Terminate Program"),
+		//	textFormats[static_cast<size_t>(TextFormat::NORMAL)],            // Text format
+		//	D2D1::RectF(0, 210, 320, 210), // Layout rectangle
+		//	brushes["blue"]
+		//);
+
+		//D2D1_RECT_F unitSquare = D2D1::RectF(
+		//	20.f, 20.f,
+		//	100.f, 100.f
+		//);
+		//pRenderTarget->DrawRectangle(unitSquare, brushes["blue"], 3.f);
 
 	}
 
@@ -268,9 +351,3 @@ private:
 
 };
 
-enum class TextFormat {
-	HEADING = 0,
-	NORMAL,
-	SMALL,
-	size
-};

@@ -140,5 +140,8 @@
     <CopyFileToFolders Include="..\assets\mainmenu.mp3">
       <Filter>Header Files\copyToOut</Filter>
     </CopyFileToFolders>
+    <CopyFileToFolders Include="..\assets\ingame.mp3">
+      <Filter>Header Files\copyToOut</Filter>
+    </CopyFileToFolders>
   </ItemGroup>
 </Project>
