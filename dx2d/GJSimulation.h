@@ -2,18 +2,16 @@
 #include <chrono>
 #include <bitset>
 #include <stdexcept>
+#include <functional>
 
 #include "GJScene.h"
 #include "irrKlang.h"
 #include "GJGlobals.h"
 
+using DeltaTime = std::chrono::duration<double>;
 class GJSimulation {
 public:
 	GJSimulation() {
-		audioEngine = irrklang::createIrrKlangDevice();
-		if (!audioEngine) {
-			MessageBox(NULL, L"Could not initialize audio engine.", L"Error", MB_OK);
-		}
 		kbCallTable[static_cast<size_t>(State::INGAME)] = &GJSimulation::kbHandleINGAME;
 		kbCallTable[static_cast<size_t>(State::WIN)] = &GJSimulation::kbHandleWIN;
 		kbCallTable[static_cast<size_t>(State::LOSS)] = &GJSimulation::kbHandleLOSS;
@@ -21,6 +19,16 @@ public:
 		kbCallTable[static_cast<size_t>(State::MAINMENU)] = &GJSimulation::kbHandleMAINMENU;
 
 		lastExplode = getTime();
+
+		audioEngine = irrklang::createIrrKlangDevice();
+		if (!audioEngine) {
+			MessageBox(NULL, L"Could not initialize audio engine.", L"Error", MB_OK);
+		}
+		audioEngine->stopAllSounds();
+		auto music = audioEngine->play2D("assets/ingame.mp3", true, false, true);
+		if (!music) {
+			MessageBox(NULL, L"Could not play ingame.mp3", L"Error", MB_OK);
+		}
 		enterMAINMENU();
 	}
 
@@ -123,29 +131,24 @@ public:
 	void enterMAINMENU() {
 		scene.state = State::MAINMENU;
 
-		audioEngine->stopAllSounds();
-		auto music = audioEngine->play2D("assets/mainmenu.mp3", true, false, true);
-		if (!music) {
-			MessageBox(NULL, L"Could not play mainmenu.mp3", L"Error", MB_OK);
-		}
+		//audioEngine->stopAllSounds();
+		//auto music = audioEngine->play2D("assets/mainmenu.mp3", true, false, true);
+		//if (!music) {
+		//	MessageBox(NULL, L"Could not play mainmenu.mp3", L"Error", MB_OK);
+		//}
 	}
 
 	void enterWIN() {
 		scene.state = State::WIN;
-		audioEngine->stopAllSounds();
-		auto music = audioEngine->play2D("assets/win.mp3", true, false, true);
-		if (!music) {
-			MessageBox(NULL, L"Could not play win.mp3", L"Error", MB_OK);
-		}
+		//audioEngine->stopAllSounds();
+		//auto music = audioEngine->play2D("assets/win.mp3", true, false, true);
+		//if (!music) {
+		//	MessageBox(NULL, L"Could not play win.mp3", L"Error", MB_OK);
+		//}
 	}
 
 	void enterLOSS() {
 		scene.state = State::LOSS;
-		audioEngine->stopAllSounds();
-		auto music = audioEngine->play2D("assets/loss.mp3", true, false, true);
-		if (!music) {
-			MessageBox(NULL, L"Could not play loss.mp3", L"Error", MB_OK);
-		}
 	}
 
 	void enterPAUSED() {
@@ -168,10 +171,59 @@ public:
 		if (scene.state != State::INGAME) {
 			return;
 		}
+		tickEvents(delta);
 		tickStats(delta);
 		tickMovement(delta);
 		tickCollision(delta);
 		++tickCounter;
+	}
+
+	void tickEvents(std::chrono::duration<double, std::milli> delta) {
+
+		if (eventQueue.size() == 0) { return; }
+		auto& tup = eventQueue.back();
+		auto& tupDelta = std::get<DeltaTime>(tup);
+		if (GNow - GGameStart > tupDelta) {
+			std::get<1>(tup)();
+			eventQueue.pop_back();
+		}
+	}
+
+	void event0() {
+		globalSpeedUp = 1.5f;
+		for (int i = 0; i < 5; ++i) {
+			initRandObstacle(i);
+		}
+
+	}
+	void event1() {
+		globalSpeedUp = 1.6f;
+		for (int i = 5; i < 10; ++i) {
+			initRandObstacle(i);
+		}
+	}
+	void event2() {
+		globalSpeedUp = 1.7f;
+		for (int i = 10; i < 15; ++i) {
+			initRandObstacle(i);
+		}
+	}
+	void event3() {
+		globalSpeedUp = 1.8f;
+		for (int i = 15; i < 20; ++i) {
+			initRandObstacle(i);
+		}
+	}
+	void event4() {
+		globalSpeedUp = 2.f;
+		for (int i = 20; i < 23; ++i) {
+			initRandObstacle(i);
+		}
+	}
+	void event5() {
+		for (int i = 23; i < 25; ++i) {
+			initRandObstacle(i);
+		}
 	}
 
 	void tickStats(std::chrono::duration<double, std::milli> delta) {
@@ -289,18 +341,19 @@ public:
 	}
 
 	void loadNewGame() {
-		audioEngine->stopAllSounds();
-		auto music = audioEngine->play2D("assets/ingame.mp3", true, false, true);
-		if (!music) {
-			MessageBox(NULL, L"Could not play ingame.mp3", L"Error", MB_OK);
-		}
+
+		eventQueue = {
+			{ DeltaTime{20.f}, [this]() { this->event5(); } },
+			{ DeltaTime{16.f}, [this]() { this->event4(); } },
+			{ DeltaTime{13.f}, [this]() { this->event3(); } },
+			{ DeltaTime{9.f}, [this]() { this->event2(); } },
+			{ DeltaTime{4.f}, [this]() { this->event1(); } },
+			{ DeltaTime{0.f}, [this]() { this->event0(); } },
+		};
 
 		scene = GJScene();
 		scene.resetEntities();
 		scene.resetObstacles();
-		for (int i = 0; i < scene.obstacles.size(); ++i) {
-			initRandObstacle(i);
-		}
 		GGameStart = getTime();
 		scene.points = 100;
 		enterINGAME();
@@ -372,9 +425,10 @@ public:
 
 private:
 	float cheatFactor = 1.f;
-	float globalSpeedUp = 2.f;
+	float globalSpeedUp = 1.5f;
 	uint64_t tickCounter = 0;
-	std::chrono::duration<double> explodeCdSeconds{ 1.6f };
+	std::vector<std::tuple<DeltaTime, std::function<void()>>> eventQueue;
+	std::chrono::duration<double> explodeCdSeconds{ 1.f };
 	std::chrono::duration<double> qLeapCdSeconds{ 12.f };
 	std::chrono::duration<double> qLeapDuration{ 2.f };
 	std::chrono::duration<double> pointsCdSeconds{ 2.f };

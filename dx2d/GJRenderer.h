@@ -98,10 +98,15 @@ public:
 		);
 		checkFailed(hr, hWnd);
 
+		//hr = pRenderTarget->CreateSolidColorBrush(
+		//	D2D1::ColorF(D2D1::ColorF(0.7f, 0.7f, 1.f)),
+		//	&brushes["blue"]
+		//);
 		hr = pRenderTarget->CreateSolidColorBrush(
-			D2D1::ColorF(D2D1::ColorF(0.7f, 0.7f, 1.f)),
+			D2D1::ColorF(D2D1::ColorF(0.49f, 0.995f, 0.995f)),
 			&brushes["blue"]
 		);
+
 		checkFailed(hr, hWnd);
 		hr = pRenderTarget->CreateSolidColorBrush(
 			D2D1::ColorF(D2D1::ColorF(1.f, 1.f, 1.f)),
@@ -113,8 +118,25 @@ public:
 		IDWriteFactory* pDWriteFactory = nullptr;
 		hr = DWriteCreateFactory(DWRITE_FACTORY_TYPE_SHARED, __uuidof(IDWriteFactory), reinterpret_cast<IUnknown**>(&pDWriteFactory));
 
+		ComPtr<IDWriteFontCollection> pFontCollection;
+		hr = pDWriteFactory->GetSystemFontCollection(&pFontCollection, FALSE);
+		checkFailed(hr, hWnd);
+
+		// Find the font family by name
+		UINT32 index = 0;
+		BOOL exists = FALSE;
+		hr = pFontCollection->FindFamilyName(
+			fontName.c_str(),
+			&index,
+			&exists
+		);
+		if (FAILED(hr) || !exists)
+		{
+			MessageBox(NULL, L"Please, exit the game, install the 'pressStart2P.ttf font file in the game folder for the game to render text properly", L"Error", MB_OK);
+			std::wcerr << L"FindFamilyName failed: " << hr << std::endl;
+		}
 		hr = pDWriteFactory->CreateTextFormat(
-			L"Press Start 2P",                // Font family
+			fontName.c_str(),                // Font family
 			nullptr,                 // Font collection
 			DWRITE_FONT_WEIGHT_NORMAL,
 			DWRITE_FONT_STYLE_NORMAL,
@@ -127,7 +149,7 @@ public:
 		hr = textFormats[static_cast<size_t>(TextFormat::HEADING)]->SetParagraphAlignment(DWRITE_PARAGRAPH_ALIGNMENT_NEAR);
 
 		hr = pDWriteFactory->CreateTextFormat(
-			L"Press Start 2P",                // Font family
+			fontName.c_str(),                // Font family
 			nullptr,                 // Font collection
 			DWRITE_FONT_WEIGHT_NORMAL,
 			DWRITE_FONT_STYLE_NORMAL,
@@ -140,7 +162,7 @@ public:
 		hr = textFormats[static_cast<size_t>(TextFormat::NORMAL)]->SetParagraphAlignment(DWRITE_PARAGRAPH_ALIGNMENT_NEAR);
 
 		hr = pDWriteFactory->CreateTextFormat(
-			L"Press Start 2P",                // Font family
+			fontName.c_str(),                // Font family
 			nullptr,                 // Font collection
 			DWRITE_FONT_WEIGHT_NORMAL,
 			DWRITE_FONT_STYLE_NORMAL,
@@ -293,6 +315,7 @@ public:
 
 	void drawScene() {
 
+		// draw entities
 		if (!scene->qLeapActive) {
 			for (const Entity& e : scene->entities) {
 				if (e.health <= 0) {
@@ -304,9 +327,10 @@ public:
 					e.getPos().e[0], pos.e[1],
 					e.getPos().e[0] + e.size, pos.e[1] + e.size
 				);
-				pLowResRenderTarget->DrawRectangle(unitSquare, brushes["blue"], 2.f);
+				pLowResRenderTarget->DrawRectangle(unitSquare, brushes["green"], 2.f);
 			}
 		}
+		// draw obstacles
 		for (const Entity& o : scene->obstacles) {
 			if (o.health <= 0) {
 				continue;
@@ -317,7 +341,7 @@ public:
 				o.size,                         // Radius X
 				o.size                          // Radius Y
 			);
-			pLowResRenderTarget->FillEllipse(ellipse, brushes["green"]);
+			pLowResRenderTarget->FillEllipse(ellipse, brushes["blue"]);
 
 		}
 	}
@@ -493,6 +517,7 @@ private:
 	}
 
 private:
+	std::wstring fontName= L"Press Start 2P";
 	HWND hWnd;
 	const GJScene* scene = nullptr;
 	ID2D1HwndRenderTarget* pRenderTarget = nullptr;

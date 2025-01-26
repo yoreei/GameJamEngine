@@ -115,6 +115,6 @@ struct GJScene {
 	uint64_t points = 100;
 	//v entities move
 	std::array<Entity, 4> entities{};
-	std::array<Entity, 24> obstacles{};
+	std::array<Entity, 25> obstacles{};
 	static inline Entity emptyEntity;
 };
