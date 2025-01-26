@@ -78,6 +78,7 @@ class Obstacle {
 
 enum class State {
 	MAINMENU = 0,
+	PREGAME,
 	INGAME,
 	PAUSED,
 	LOSS,
@@ -112,6 +113,7 @@ struct GJScene {
 	bool explodeCd = false;
 	bool qLeapCd = false;
 	bool qLeapActive = false;
+	uint64_t hiScore = 0;
 	uint64_t points = 100;
 	//v entities move
 	std::array<Entity, 4> entities{};

@@ -149,5 +149,8 @@
     <CopyFileToFolders Include="..\assets\qLeap.png">
       <Filter>Header Files\copyToOut</Filter>
     </CopyFileToFolders>
+    <CopyFileToFolders Include="..\assets\explode.png">
+      <Filter>Header Files\copyToOut</Filter>
+    </CopyFileToFolders>
   </ItemGroup>
 </Project>

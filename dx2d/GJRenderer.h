@@ -5,6 +5,7 @@
 #include <chrono>
 #include <array>
 #include <stdexcept>
+#include <format>
 
 #include <windows.h>
 #include <d2d1.h>
@@ -42,11 +43,11 @@ public:
 			CLSCTX_INPROC_SERVER,
 			IID_PPV_ARGS(&pWICFactory)
 		);
-		checkFailed(hr, hWnd);
+		checkFailed(hr, hWnd, "CoCreateInstance failed");
 
 
 		hr = D2D1CreateFactory(D2D1_FACTORY_TYPE_SINGLE_THREADED, &pFactory);
-		checkFailed(hr, hWnd);
+		checkFailed(hr, hWnd, "CreateFactory");
 
 
 		// Get the size of the client area
@@ -60,14 +61,14 @@ public:
 			),
 			&pRenderTarget
 		);
-		checkFailed(hr, hWnd);
+		checkFailed(hr, hWnd, "createHwndRenderTarget failed");
 
 		// Create a compatible render target for low-res drawing
 		hr = pRenderTarget->CreateCompatibleRenderTarget(
 			D2D1::SizeF(360.0f, 360.0f),
 			&pLowResRenderTarget
 		);
-		checkFailed(hr, hWnd);
+		checkFailed(hr, hWnd, "createCompatibleRenderTarget failed");
 
 		// Disable anti-aliasing for pixelated look
 		pLowResRenderTarget->SetAntialiasMode(D2D1_ANTIALIAS_MODE_ALIASED);
@@ -84,19 +85,19 @@ public:
 			D2D1::ColorF(D2D1::ColorF(0.1f, 0.1f, 0.1f)),
 			&brushes["black"]
 		);
-		checkFailed(hr, hWnd);
+		checkFailed(hr, hWnd, "createSolidColorBrush failed");
 
 		hr = pRenderTarget->CreateSolidColorBrush(
 			D2D1::ColorF(D2D1::ColorF(0.7f, 1.f, 0.7f)),
 			&brushes["green"]
 		);
-		checkFailed(hr, hWnd);
+		checkFailed(hr, hWnd, "createSolidColorBrush failed");
 
 		hr = pRenderTarget->CreateSolidColorBrush(
 			D2D1::ColorF(D2D1::ColorF(1.f, 1.f, 0.7f)),
 			&brushes["amber"]
 		);
-		checkFailed(hr, hWnd);
+		checkFailed(hr, hWnd, "createSolidColorBrush failed");
 
 		//hr = pRenderTarget->CreateSolidColorBrush(
 		//	D2D1::ColorF(D2D1::ColorF(0.7f, 0.7f, 1.f)),
@@ -107,12 +108,12 @@ public:
 			&brushes["blue"]
 		);
 
-		checkFailed(hr, hWnd);
+		checkFailed(hr, hWnd, "createSolidColorBrush failed");
 		hr = pRenderTarget->CreateSolidColorBrush(
 			D2D1::ColorF(D2D1::ColorF(1.f, 1.f, 1.f)),
 			&brushes["white"]
 		);
-		checkFailed(hr, hWnd);
+		checkFailed(hr, hWnd, "createSolidColorBrush failed");
 
 
 		IDWriteFactory* pDWriteFactory = nullptr;
@@ -120,7 +121,7 @@ public:
 
 		ComPtr<IDWriteFontCollection> pFontCollection;
 		hr = pDWriteFactory->GetSystemFontCollection(&pFontCollection, FALSE);
-		checkFailed(hr, hWnd);
+		checkFailed(hr, hWnd, "getSystemFontCollection failed");
 
 		// Find the font family by name
 		UINT32 index = 0;
@@ -202,11 +203,12 @@ public:
 
 		// Setup Draw Call Table
 		drawCallTable[static_cast<size_t>(State::INGAME)] = &GJRenderer::drawINGAME;
+		drawCallTable[static_cast<size_t>(State::PREGAME)] = &GJRenderer::drawPREGAME;
 		drawCallTable[static_cast<size_t>(State::LOSS)] = &GJRenderer::drawLOSS;
 		drawCallTable[static_cast<size_t>(State::WIN)] = &GJRenderer::drawWIN;
 		drawCallTable[static_cast<size_t>(State::MAINMENU)] = &GJRenderer::drawMAINMENU;
 		drawCallTable[static_cast<size_t>(State::PAUSED)] = &GJRenderer::drawPAUSED;
-		if (static_cast<uint32_t>(State::size) != 5) {
+		if (static_cast<uint32_t>(State::size) != 6) {
 			throw std::runtime_error("update state handling in renderer\n");
 		}
 
@@ -266,7 +268,7 @@ public:
 
 		ID2D1Bitmap* pLowResBitmap = nullptr;
 		HRESULT hr = pLowResRenderTarget->GetBitmap(&pLowResBitmap);
-		checkFailed(hr, hWnd);
+		checkFailed(hr, hWnd, "getBitmap failed");
 
 		D2D1_RECT_F destRect = D2D1::RectF(
 			0.0f,                         // Left
@@ -296,6 +298,10 @@ public:
 		drawScene();
 		drawUI();
 	}
+	void drawPREGAME() {
+		drawInstructions();
+		drawUI();
+	}
 	void drawMAINMENU() {
 		drawScene();
 		drawMenu("Main Menu");
@@ -303,14 +309,29 @@ public:
 	void drawLOSS() {
 		drawScene();
 		drawEnd(L"Loss");
+		drawUI();
 	}
 	void drawWIN() {
 		drawScene();
-		drawEnd(L"Victory");
+		drawEnd(L"New"); //> i.e. "New HiScore" will be written
+		drawUI();
 	}
 	void drawPAUSED() {
 		drawScene();
 		drawPaused();
+		drawUI();
+	}
+
+	void drawInstructions() {
+		std::wstring instructions = L"You are an electron, running along the path of least resistance. Do not hit the air bubbles!\n\n[Q],[W],[A],[S]: Quantum Scatter\n[Space] Quantum Leap\n";
+		pRenderTarget->DrawText(
+			instructions.c_str(),    // Text to render
+			wcslen(instructions.c_str()),
+			textFormats[static_cast<size_t>(TextFormat::NORMAL)],            // Text format
+			D2D1::RectF(20, 20, 340, 340), // Layout rectangle
+			brushes["white"]
+		);
+
 	}
 
 	void drawScene() {
@@ -356,17 +377,17 @@ public:
 			WICDecodeMetadataCacheOnLoad,
 			&pDecoder
 		);
-		checkFailed(hr, hWnd);
+		checkFailed(hr, hWnd, "CreateDecoderFromFileName failed");
 
 		// Get the first frame of the image
 		ComPtr<IWICBitmapFrameDecode> pFrame;
 		hr = pDecoder->GetFrame(0, &pFrame);
-		checkFailed(hr, hWnd);
+		checkFailed(hr, hWnd, "GetFrame failed");
 
 		// Convert the image format to BGRA, which Direct2D expects
 		ComPtr<IWICFormatConverter> pConverter;
 		hr = pWICFactory->CreateFormatConverter(&pConverter);
-		checkFailed(hr, hWnd);
+		checkFailed(hr, hWnd, "CreateFormatConverter failed");
 
 		hr = pConverter->Initialize(
 			pFrame.Get(),
@@ -376,14 +397,14 @@ public:
 			0.0,
 			WICBitmapPaletteTypeMedianCut
 		);
-		checkFailed(hr, hWnd);
+		checkFailed(hr, hWnd, "initialize failed");
 
 		hr = pRenderTarget->CreateBitmapFromWicBitmap(
 			pConverter.Get(),
 			nullptr, // Bitmap properties; nullptr for default
 			&bitmaps[eBitmap]
 		);
-		checkFailed(hr, hWnd);
+		checkFailed(hr, hWnd, "createBitmapFromWicBitmap failed");
 	}
 
 	void drawUI() {
@@ -410,17 +431,18 @@ public:
 			brushes["white"]
 		);
 
-		D2D1_SIZE_F bitmapSize = bitmaps[EBitmap::QLeap]->GetSize();
-		bitmapSize.height *= 2;
-		bitmapSize.width *= 2;
-		pLowResRenderTarget->DrawBitmap(
-			bitmaps[EBitmap::QLeap].Get(),
-			D2D1::RectF(15, 325, 15 + bitmapSize.width, 325 + bitmapSize.height),
-			1.0f, // Opacity (1.0f = fully opaque)
-			D2D1_BITMAP_INTERPOLATION_MODE_NEAREST_NEIGHBOR,
-			nullptr // Source rectangle (nullptr to use entire bitmap)
-		);
-
+		if (!scene->qLeapCd) {
+			D2D1_SIZE_F bitmapSize = bitmaps[EBitmap::QLeap]->GetSize();
+			bitmapSize.height *= 2;
+			bitmapSize.width *= 2;
+			pLowResRenderTarget->DrawBitmap(
+				bitmaps[EBitmap::QLeap].Get(),
+				D2D1::RectF(15, 325, 15 + bitmapSize.width, 325 + bitmapSize.height),
+				1.0f, // Opacity (1.0f = fully opaque)
+				D2D1_BITMAP_INTERPOLATION_MODE_NEAREST_NEIGHBOR,
+				nullptr // Source rectangle (nullptr to use entire bitmap)
+			);
+		}
 
 	}
 
@@ -439,7 +461,7 @@ public:
 			wcslen(L"Paused"),
 			textFormats[static_cast<size_t>(TextFormat::HEADING)],            // Text format
 			D2D1::RectF(0, 40, 360, 180), // Layout rectangle
-			brushes["blue"]
+			brushes["white"]
 		);
 
 		std::wstring t = L"[ESC] Resume\n[R] Reload\n[BSPACE] Quit";
@@ -448,25 +470,26 @@ public:
 			wcslen(t.c_str()),
 			textFormats[static_cast<size_t>(TextFormat::NORMAL)],            // Text format
 			D2D1::RectF(0, 180, 320, 210), // Layout rectangle
-			brushes["blue"]
+			brushes["white"]
 		);
 	}
 
 	void drawEnd(const std::wstring& text) {
+		std::wstring heading = std::format(L"{}\nHiScore: {}", text, scene->hiScore);
 		pLowResRenderTarget->DrawText(
-			text.c_str(),    // Text to render
-			wcslen(text.c_str()),
+			heading.c_str(),    // Text to render
+			wcslen(heading.c_str()),
 			textFormats[static_cast<size_t>(TextFormat::HEADING)],            // Text format
 			D2D1::RectF(0, 40, 360, 180), // Layout rectangle
-			brushes["blue"]
+			brushes["white"]
 		);
 
 		pLowResRenderTarget->DrawText(
 			L"[R] Reload\n[BSPACE] Quit",    // Text to render
 			wcslen(L"[R] Reload\n[BSPACE] Quit"),
 			textFormats[static_cast<size_t>(TextFormat::NORMAL)],            // Text format
-			D2D1::RectF(0, 180, 320, 210), // Layout rectangle
-			brushes["blue"]
+			D2D1::RectF(0, 220, 320, 300), // Layout rectangle
+			brushes["white"]
 		);
 
 	}
@@ -505,10 +528,10 @@ public:
 	}
 
 private:
-	void checkFailed(HRESULT hr, HWND hwnd) {
+	void checkFailed(HRESULT hr, HWND hwnd, const std::string& message ) {
 		if (FAILED(hr))
 		{
-			MessageBox(NULL, _T("Direct2D Initialization Failed!"), _T("Error"), MB_OK);
+			MessageBoxA(NULL, message.c_str(), "Error", MB_OK);
 			DestroyWindow(hwnd);
 			CoUninitialize();
 			exit(-1);
@@ -517,7 +540,7 @@ private:
 	}
 
 private:
-	std::wstring fontName= L"Press Start 2P";
+	std::wstring fontName = L"Press Start 2P";
 	HWND hWnd;
 	const GJScene* scene = nullptr;
 	ID2D1HwndRenderTarget* pRenderTarget = nullptr;

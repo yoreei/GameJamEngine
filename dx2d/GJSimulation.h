@@ -3,6 +3,7 @@
 #include <bitset>
 #include <stdexcept>
 #include <functional>
+#include <fstream>
 
 #include "GJScene.h"
 #include "irrKlang.h"
@@ -13,10 +14,15 @@ class GJSimulation {
 public:
 	GJSimulation() {
 		kbCallTable[static_cast<size_t>(State::INGAME)] = &GJSimulation::kbHandleINGAME;
+		kbCallTable[static_cast<size_t>(State::PREGAME)] = &GJSimulation::kbHandlePREGAME;
 		kbCallTable[static_cast<size_t>(State::WIN)] = &GJSimulation::kbHandleWIN;
 		kbCallTable[static_cast<size_t>(State::LOSS)] = &GJSimulation::kbHandleLOSS;
 		kbCallTable[static_cast<size_t>(State::PAUSED)] = &GJSimulation::kbHandlePAUSED;
 		kbCallTable[static_cast<size_t>(State::MAINMENU)] = &GJSimulation::kbHandleMAINMENU;
+		if (kbCallTable.size() != 6) {
+			MessageBox(NULL, L"update kbCallTable.", L"Error", MB_OK);
+			throw std::runtime_error("");
+		}
 
 		lastExplode = getTime();
 
@@ -24,6 +30,7 @@ public:
 		if (!audioEngine) {
 			MessageBox(NULL, L"Could not initialize audio engine.", L"Error", MB_OK);
 		}
+
 		audioEngine->stopAllSounds();
 		auto music = audioEngine->play2D("assets/ingame.mp3", true, false, true);
 		if (!music) {
@@ -36,6 +43,21 @@ public:
 		return &scene;
 	}
 
+	void kbHandlePREGAME(WPARAM wParam, bool keyDown) {
+		if (keyDown) {
+			switch (wParam) {
+			case VK_ESCAPE:
+			case 'Q':
+			case 'W':
+			case 'S':
+			case 'A':
+			case VK_SPACE:
+			case VK_RETURN:
+				loadNewGame();
+			}
+		}
+
+	}
 	void kbHandleINGAME(WPARAM wParam, bool keyDown) {
 		if (keyDown) {
 			if (wParam == VK_ESCAPE) {
@@ -77,7 +99,7 @@ public:
 				enterINGAME();
 			}
 			else if (wParam == 'R') {
-				loadNewGame();
+				enterPREGAME();
 			}
 			else if (wParam == VK_BACK) {
 				exit(0);
@@ -88,7 +110,7 @@ public:
 	void kbHandleMAINMENU(WPARAM wParam, bool keyDown) {
 		if (keyDown) {
 			if (wParam == VK_RETURN) {
-				loadNewGame();
+				enterPREGAME();
 			}
 			else if (wParam == VK_BACK) {
 				exit(0);
@@ -162,6 +184,10 @@ public:
 
 	}
 
+	void enterPREGAME() {
+		scene.state = State::PREGAME;
+	}
+
 	void enterINGAME() {
 		scene.state = State::INGAME;
 
@@ -216,14 +242,31 @@ public:
 	}
 	void event4() {
 		globalSpeedUp = 2.f;
+		increaseGlobalSize(1);
 		for (int i = 20; i < 23; ++i) {
 			initRandObstacle(i);
 		}
 	}
 	void event5() {
-		for (int i = 23; i < 25; ++i) {
+		increaseGlobalSize(1);
+		for (int i = 23; i < scene.obstacles.size(); ++i) {
 			initRandObstacle(i);
 		}
+	}
+	void event6() {
+		globalSpeedUp = 2.3f;
+		increaseGlobalSize(1);
+		MessageBox(NULL, L"OMG You're Hardcore!", L"Error", MB_OK);
+		for (int i = 0; i < scene.obstacles.size(); ++i) {
+		}
+	}
+
+	void increaseGlobalSize(int add) {
+		for (Entity& o : scene.obstacles) {
+			if (o.health == 0) { continue; }
+			o.size += add;
+		}
+		globalSizeFactor += add;
 	}
 
 	void tickStats(std::chrono::duration<double, std::milli> delta) {
@@ -245,12 +288,23 @@ public:
 		}
 	}
 
-	void wrapAround(Entity& e) {
+	void wrapAround(Entity& e, float padding = 0) {
 		vec3 pos = e.getPos();
-		if (pos.x() < 0.f) { e.setX(359.f); }
-		if (pos.x() > 360.f) { e.setX(1.f); }
-		if (pos.y() < 0.f) { e.setY(359.f); }
-		if (pos.y() > 360.f) { e.setY(1.f); }
+		if (pos.x() < 0.f - padding) { e.setX(359.f + padding); }
+		else if (pos.x() > 360.f + padding) { e.setX(1.f - padding); }
+
+		if (pos.y() < 0.f - padding) { e.setY(359.f + padding); }
+		else if (pos.y() > 360.f + padding) { e.setY(1.f - padding); }
+
+	}
+
+	void reflectEntity(Entity& e, float padding = 0) {
+		vec3 pos = e.getPos();
+		if (pos.x() < 0.f - padding) { e.momentum = reflect(e.momentum, vec3{ 1, 0, 0 }); } // left
+		else if (pos.x() > 360.f + padding) { e.momentum = reflect(e.momentum, vec3{ -1, 0, 0 }); } // right
+
+		if (pos.y() < 0.f - padding) { e.momentum = reflect(e.momentum, vec3{ 0, 1, 0 }); } // top
+		else if (pos.y() > 360.f + padding) { e.momentum = reflect(e.momentum, vec3{ 0, -1, 0 }); } // bottom
 
 	}
 
@@ -263,8 +317,7 @@ public:
 				}
 				e.moveBy(e.momentum * globalSpeedUp);
 
-				// wraparound mechanic
-				wrapAround(e);
+				reflectEntity(e);
 			}
 		}
 		for (int i = 0; i < scene.obstacles.size(); ++i) {
@@ -274,7 +327,7 @@ public:
 			}
 			e.moveBy(e.momentum * globalSpeedUp);
 
-			wrapAround(e);
+			wrapAround(e, 15.f);
 
 		}
 	}
@@ -331,7 +384,19 @@ public:
 		}
 		// here all entities have health 0
 		scene.entities[id].health = 1; //< so the player can see their entity on the loss screen
-		enterLOSS();
+		endGame();
+	}
+
+	void endGame() {
+		uint64_t prevHiScore = readHiScore();
+		scene.hiScore = prevHiScore;
+		if (scene.points > prevHiScore) {
+			enterWIN();
+			writeHiScore(scene.points);
+		}
+		else {
+			enterLOSS();
+		}
 	}
 
 	void handleInput(WPARAM wParam, bool keyDown) {
@@ -356,6 +421,7 @@ public:
 		scene.resetObstacles();
 		GGameStart = getTime();
 		scene.points = 100;
+		float globalSizeFactor = 0.f;
 		enterINGAME();
 	}
 
@@ -405,8 +471,8 @@ public:
 		obstacles[id].momentum = center - obstacles[id].getPos();
 		obstacles[id].momentum = unit_vector(obstacles[id].momentum);
 
-		static std::uniform_int_distribution<uint16_t> sizeDist(9, 13);
-		obstacles[id].size = sizeDist(GEN);
+		static std::uniform_int_distribution<uint16_t> sizeDist(7, 11);
+		obstacles[id].size = sizeDist(GEN) + globalSizeFactor;
 
 	}
 
@@ -422,10 +488,45 @@ public:
 		return false;
 	}
 
+	uint64_t readHiScore() {
+		std::string line;
+		std::ifstream myfile(hiScoreFile);
+		if (myfile.is_open())
+		{
+			getline(myfile, line);
+			myfile.close();
+		}
+		else {
+			MessageBox(NULL, L"Could not read hiScore file", L"Error", MB_OK);
+			return 0;
+		}
+		uint64_t toInt;
+		try {
+			toInt = std::stoll(line);
+		}
+		catch (std::exception e) {
+			MessageBox(NULL, L"Could not interpret hiScore data", L"Error", MB_OK);
+			return 0;
+		}
+		return toInt;
+	}
+
+	void writeHiScore(uint64_t score) {
+		try {
+			std::ofstream ofs(hiScoreFile, std::ofstream::out);
+			ofs << std::to_string(scene.points);
+			ofs.close();
+		}
+		catch (std::exception e) {
+			MessageBox(NULL, L"Error writing HiScore to file", L"Error", MB_OK);
+		}
+	}
 
 private:
+	std::string hiScoreFile = "hiScore.txt";
 	float cheatFactor = 1.f;
 	float globalSpeedUp = 1.5f;
+	float globalSizeFactor = 0.f;
 	uint64_t tickCounter = 0;
 	std::vector<std::tuple<DeltaTime, std::function<void()>>> eventQueue;
 	std::chrono::duration<double> explodeCdSeconds{ 1.f };
