@@ -101,6 +101,7 @@ public:
 			else if (wParam == 'R') {
 				enterPREGAME();
 			}
+
 			else if (wParam == VK_BACK) {
 				exit(0);
 			}
@@ -129,10 +130,10 @@ public:
 	}
 	void castExplode(size_t target) {
 		if (scene.explodeCd) { return; }
-		if (scene.points < 100) { return; }
+		if (scene.points < 75) { return; }
 		if (scene.entities[target].health <= 0) { return; }
 
-		scene.points -= 100;
+		scene.points -= 75;
 		lastExplode = GNow;
 		scene.explodeCd = true;
 		for (int i = 0; i < scene.entities.size(); ++i) {
@@ -224,7 +225,7 @@ public:
 	}
 	void event1() {
 		globalSpeedUp = 1.6f;
-		for (int i = 5; i < 10; ++i) {
+		for (int i = 5; i < 9; ++i) {
 			initRandObstacle(i);
 		}
 	}
@@ -236,26 +237,26 @@ public:
 	}
 	void event3() {
 		globalSpeedUp = 1.8f;
-		for (int i = 15; i < 20; ++i) {
+		for (int i = 15; i < 17; ++i) {
 			initRandObstacle(i);
 		}
 	}
 	void event4() {
 		globalSpeedUp = 2.f;
-		increaseGlobalSize(1);
-		for (int i = 20; i < 23; ++i) {
+		//increaseGlobalSize(1);
+		for (int i = 17; i < 19; ++i) {
 			initRandObstacle(i);
 		}
 	}
 	void event5() {
-		increaseGlobalSize(1);
+		//increaseGlobalSize(1);
 		for (int i = 23; i < scene.obstacles.size(); ++i) {
 			initRandObstacle(i);
 		}
 	}
 	void event6() {
 		globalSpeedUp = 2.3f;
-		increaseGlobalSize(1);
+		//increaseGlobalSize(1);
 		MessageBox(NULL, L"OMG You're Hardcore!", L"Error", MB_OK);
 		for (int i = 0; i < scene.obstacles.size(); ++i) {
 		}
@@ -408,11 +409,12 @@ public:
 	void loadNewGame() {
 
 		eventQueue = {
-			{ DeltaTime{20.f}, [this]() { this->event5(); } },
-			{ DeltaTime{16.f}, [this]() { this->event4(); } },
-			{ DeltaTime{13.f}, [this]() { this->event3(); } },
-			{ DeltaTime{9.f}, [this]() { this->event2(); } },
-			{ DeltaTime{4.f}, [this]() { this->event1(); } },
+			{ DeltaTime{60.f}, [this]() { this->event6(); } },
+			{ DeltaTime{38.f}, [this]() { this->event5(); } },
+			{ DeltaTime{26.f}, [this]() { this->event4(); } },
+			{ DeltaTime{18.f}, [this]() { this->event3(); } },
+			{ DeltaTime{12.f}, [this]() { this->event2(); } },
+			{ DeltaTime{6.f}, [this]() { this->event1(); } },
 			{ DeltaTime{0.f}, [this]() { this->event0(); } },
 		};
 
